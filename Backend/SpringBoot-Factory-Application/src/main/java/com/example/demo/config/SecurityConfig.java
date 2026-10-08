@@ -79,6 +79,12 @@ public class SecurityConfig {
                     "/v3/api-docs/**"
                 ).permitAll()
 
+                // Actuator public endpoints
+                .requestMatchers(
+                    "/actuator/health",
+                    "/actuator/info"
+                ).permitAll()
+
                 // All other APIs require JWT
                 .anyRequest().authenticated()
             )
