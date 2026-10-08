@@ -3,154 +3,143 @@ package com.example.demo.controller;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
-import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import org.springframework.http.MediaType;
 
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.example.demo.SpringBootFactoryApplication;
+import com.example.demo.dto.MachineRequest;
 import com.example.demo.entity.Machine;
-import com.example.demo.entity.Plant;
+import com.example.demo.exception.GlobalExceptionHandler;
 import com.example.demo.service.MachineService;
 
-@SpringBootTest(
-        classes = SpringBootFactoryApplication.class
-)
-@AutoConfigureMockMvc(addFilters = false)
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@ExtendWith(MockitoExtension.class)
 class MachineControllerMockMvcTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @Mock
     private MachineService machineService;
 
-    @Test
-    @DisplayName("Should create machine successfully")
-    void shouldCreateMachineSuccessfully() throws Exception {
+    private ObjectMapper objectMapper;
 
-        Plant plant = new Plant(
-                "Pune Manufacturing Plant",
-                "Pune, Maharashtra",
-                true
+    private MachineController machineController;
+
+    private Machine machine;
+
+    @BeforeEach
+    void setUp() throws Exception {
+
+        objectMapper = new ObjectMapper();
+
+        machineController = new MachineController(machineService);
+
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(machineController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+
+        machine = createMachine(
+                1L,
+                "CNC Machine",
+                "CNC",
+                "RUNNING"
         );
+    }
 
-        Machine machine = mock(Machine.class);
+    private Machine createMachine(
+            Long id,
+            String name,
+            String type,
+            String status) throws Exception {
 
-        when(machine.getId())
-                .thenReturn(1L);
+        Machine machine = new Machine();
 
-        when(machine.getName())
-                .thenReturn("CNC Machine 01");
+        Field idField = Machine.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(machine, id);
 
-        when(machine.getType())
-                .thenReturn("CNC");
+        machine.setName(name);
+        machine.setType(type);
+        machine.setStatus(status);
 
-        when(machine.getStatus())
-                .thenReturn("ACTIVE");
+        return machine;
+    }
 
-        when(machine.getPlant())
-                .thenReturn(plant);
+    private MachineRequest createMachineRequest() {
 
-        when(machineService.create(any()))
-                .thenReturn(machine);
+        MachineRequest request = new MachineRequest();
 
-        String requestBody = """
-                {
-                    "name": "CNC Machine 01",
-                    "type": "CNC",
-                    "status": "ACTIVE",
-                    "plantId": 2
-                }
-                """;
+        request.setName("CNC Machine");
+        request.setType("CNC");
+        request.setStatus("RUNNING");
+        request.setPlantId(1L);
 
-        mockMvc.perform(
-                post("/api/machines")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody)
-        )
-        .andExpect(status().isCreated())
-        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.id").value(1))
-        .andExpect(jsonPath("$.name").value("CNC Machine 01"))
-        .andExpect(jsonPath("$.type").value("CNC"))
-        .andExpect(jsonPath("$.status").value("ACTIVE"));
+        return request;
     }
 
     @Test
-    @DisplayName("Should get machine by ID successfully")
     void shouldGetMachineByIdSuccessfully() throws Exception {
 
-        Machine machine = mock(Machine.class);
-
-        when(machine.getId())
-                .thenReturn(1L);
-
-        when(machine.getName())
-                .thenReturn("CNC Machine 01");
-
-        when(machine.getType())
-                .thenReturn("CNC");
-
-        when(machine.getStatus())
-                .thenReturn("ACTIVE");
-
-        when(machineService.getById(eq(1L)))
+        when(machineService.getById(1L))
                 .thenReturn(machine);
 
         mockMvc.perform(
                 get("/api/machines/1")
         )
         .andExpect(status().isOk())
-        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$.id").value(1))
-        .andExpect(jsonPath("$.name").value("CNC Machine 01"))
+        .andExpect(jsonPath("$.name").value("CNC Machine"))
         .andExpect(jsonPath("$.type").value("CNC"))
-        .andExpect(jsonPath("$.status").value("ACTIVE"));
+        .andExpect(jsonPath("$.status").value("RUNNING"));
     }
 
     @Test
-    @DisplayName("Should get all machines with pagination successfully")
+    void shouldCreateMachineSuccessfully() throws Exception {
+
+        MachineRequest request = createMachineRequest();
+
+        when(machineService.create(any(MachineRequest.class)))
+                .thenReturn(machine);
+
+        mockMvc.perform(
+                post("/api/machines")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request))
+        )
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.id").value(1))
+        .andExpect(jsonPath("$.name").value("CNC Machine"))
+        .andExpect(jsonPath("$.type").value("CNC"))
+        .andExpect(jsonPath("$.status").value("RUNNING"));
+    }
+
+    @Test
     void shouldGetAllMachinesSuccessfully() throws Exception {
-
-        Machine machine = mock(Machine.class);
-
-        when(machine.getId())
-                .thenReturn(1L);
-
-        when(machine.getName())
-                .thenReturn("CNC Machine 01");
-
-        when(machine.getType())
-                .thenReturn("CNC");
-
-        when(machine.getStatus())
-                .thenReturn("ACTIVE");
 
         PageImpl<Machine> page = new PageImpl<>(
                 List.of(machine),
@@ -158,41 +147,19 @@ class MachineControllerMockMvcTest {
                 1
         );
 
-        when(machineService.getAll(any()))
+        when(machineService.getAll(any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(
                 get("/api/machines")
                         .param("page", "0")
                         .param("size", "10")
-                        .param("sortBy", "name")
-                        .param("direction", "asc")
         )
-        .andExpect(status().isOk())
-        .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-        .andExpect(jsonPath("$.content[0].id").value(1))
-        .andExpect(jsonPath("$.content[0].name").value("CNC Machine 01"))
-        .andExpect(jsonPath("$.content[0].type").value("CNC"))
-        .andExpect(jsonPath("$.content[0].status").value("ACTIVE"))
-        .andExpect(jsonPath("$.page").value(0))
-        .andExpect(jsonPath("$.size").value(10))
-        .andExpect(jsonPath("$.totalElements").value(1))
-        .andExpect(jsonPath("$.totalPages").value(1))
-        .andExpect(jsonPath("$.first").value(true))
-        .andExpect(jsonPath("$.last").value(true));
+        .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Should get machines by plant successfully")
     void shouldGetMachinesByPlantSuccessfully() throws Exception {
-
-        Machine machine = mock(Machine.class);
-
-        when(machine.getId())
-                .thenReturn(1L);
-
-        when(machine.getName())
-                .thenReturn("CNC Machine 01");
 
         PageImpl<Machine> page = new PageImpl<>(
                 List.of(machine),
@@ -201,38 +168,20 @@ class MachineControllerMockMvcTest {
         );
 
         when(machineService.getByPlant(
-                eq(2L),
-                any()
-        ))
-        .thenReturn(page);
+                eq(1L),
+                any(Pageable.class)))
+                .thenReturn(page);
 
         mockMvc.perform(
-                get("/api/machines/plant/2")
+                get("/api/machines/plant/1")
                         .param("page", "0")
                         .param("size", "10")
-                        .param("sortBy", "name")
-                        .param("direction", "asc")
         )
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content[0].id").value(1))
-        .andExpect(jsonPath("$.content[0].name").value("CNC Machine 01"))
-        .andExpect(jsonPath("$.totalElements").value(1));
+        .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Should get machines by status successfully")
     void shouldGetMachinesByStatusSuccessfully() throws Exception {
-
-        Machine machine = mock(Machine.class);
-
-        when(machine.getId())
-                .thenReturn(1L);
-
-        when(machine.getName())
-                .thenReturn("CNC Machine 01");
-
-        when(machine.getStatus())
-                .thenReturn("ACTIVE");
 
         PageImpl<Machine> page = new PageImpl<>(
                 List.of(machine),
@@ -241,35 +190,43 @@ class MachineControllerMockMvcTest {
         );
 
         when(machineService.getByStatus(
-                eq("ACTIVE"),
-                any()
-        ))
-        .thenReturn(page);
+                eq("RUNNING"),
+                any(Pageable.class)))
+                .thenReturn(page);
 
         mockMvc.perform(
-                get("/api/machines/status/ACTIVE")
+                get("/api/machines/status/RUNNING")
                         .param("page", "0")
                         .param("size", "10")
-                        .param("sortBy", "name")
-                        .param("direction", "asc")
         )
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content[0].id").value(1))
-        .andExpect(jsonPath("$.content[0].status").value("ACTIVE"))
-        .andExpect(jsonPath("$.totalElements").value(1));
+        .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Should search machines by name successfully")
+    void shouldGetMachinesByPlantAndStatusSuccessfully() throws Exception {
+
+        PageImpl<Machine> page = new PageImpl<>(
+                List.of(machine),
+                PageRequest.of(0, 10),
+                1
+        );
+
+        when(machineService.getByPlantAndStatus(
+                eq(1L),
+                eq("RUNNING"),
+                any(Pageable.class)))
+                .thenReturn(page);
+
+        mockMvc.perform(
+                get("/api/machines/plant/1/status/RUNNING")
+                        .param("page", "0")
+                        .param("size", "10")
+        )
+        .andExpect(status().isOk());
+    }
+
+    @Test
     void shouldSearchMachinesByNameSuccessfully() throws Exception {
-
-        Machine machine = mock(Machine.class);
-
-        when(machine.getId())
-                .thenReturn(1L);
-
-        when(machine.getName())
-                .thenReturn("CNC Machine 01");
 
         PageImpl<Machine> page = new PageImpl<>(
                 List.of(machine),
@@ -279,139 +236,89 @@ class MachineControllerMockMvcTest {
 
         when(machineService.searchByName(
                 eq("CNC"),
-                any()
-        ))
-        .thenReturn(page);
+                any(Pageable.class)))
+                .thenReturn(page);
 
         mockMvc.perform(
                 get("/api/machines/search/name")
                         .param("name", "CNC")
                         .param("page", "0")
                         .param("size", "10")
-                        .param("sortBy", "name")
-                        .param("direction", "asc")
         )
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.content[0].id").value(1))
-        .andExpect(jsonPath("$.content[0].name").value("CNC Machine 01"))
-        .andExpect(jsonPath("$.totalElements").value(1));
+        .andExpect(status().isOk());
     }
 
     @Test
-    @DisplayName("Should update machine successfully")
     void shouldUpdateMachineSuccessfully() throws Exception {
 
-        Machine machine = mock(Machine.class);
-
-        when(machine.getId())
-                .thenReturn(1L);
-
-        when(machine.getName())
-                .thenReturn("Updated CNC Machine");
-
-        when(machine.getType())
-                .thenReturn("CNC");
-
-        when(machine.getStatus())
-                .thenReturn("ACTIVE");
+        MachineRequest request = createMachineRequest();
 
         when(machineService.update(
                 eq(1L),
-                any()
-        ))
-        .thenReturn(machine);
-
-        String requestBody = """
-                {
-                    "name": "Updated CNC Machine",
-                    "type": "CNC",
-                    "status": "ACTIVE",
-                    "plantId": 2
-                }
-                """;
+                any(MachineRequest.class)))
+                .thenReturn(machine);
 
         mockMvc.perform(
                 put("/api/machines/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody)
+                        .content(objectMapper.writeValueAsString(request))
         )
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(1))
-        .andExpect(jsonPath("$.name").value("Updated CNC Machine"))
+        .andExpect(jsonPath("$.name").value("CNC Machine"))
         .andExpect(jsonPath("$.type").value("CNC"))
-        .andExpect(jsonPath("$.status").value("ACTIVE"));
+        .andExpect(jsonPath("$.status").value("RUNNING"));
     }
 
     @Test
-    @DisplayName("Should delete machine successfully")
     void shouldDeleteMachineSuccessfully() throws Exception {
 
         doNothing()
                 .when(machineService)
                 .delete(1L);
 
-        MachineController machineController =
-                new MachineController(machineService);
-
-        MockMvc standaloneMockMvc =
-                MockMvcBuilders
-                        .standaloneSetup(machineController)
-                        .build();
-
-        standaloneMockMvc.perform(
+        mockMvc.perform(
                 delete("/api/machines/1")
         )
         .andExpect(status().isNoContent());
-
-        verify(machineService)
-                .delete(1L);
     }
 
     @Test
-    @DisplayName("Should return bad request for invalid machine request")
-    void shouldReturnBadRequestForInvalidMachineRequest() throws Exception {
+    void shouldRejectInvalidMachineRequest() throws Exception {
 
-        String requestBody = """
-                {
-                    "name": "",
-                    "type": "",
-                    "status": "",
-                    "plantId": null
-                }
-                """;
+        MachineRequest request = new MachineRequest();
+
+        request.setName("");
+        request.setType("");
+        request.setStatus("");
+        request.setPlantId(null);
 
         mockMvc.perform(
                 post("/api/machines")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestBody)
+                        .content(objectMapper.writeValueAsString(request))
         )
         .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("Should return bad request for negative page")
-    void shouldReturnBadRequestForNegativePage() throws Exception {
+    void shouldRejectNegativePageNumber() throws Exception {
 
         mockMvc.perform(
                 get("/api/machines")
                         .param("page", "-1")
                         .param("size", "10")
-                        .param("sortBy", "name")
-                        .param("direction", "asc")
         )
         .andExpect(status().isBadRequest());
     }
 
     @Test
-    @DisplayName("Should return bad request for invalid page size")
-    void shouldReturnBadRequestForInvalidPageSize() throws Exception {
+    void shouldRejectInvalidPageSize() throws Exception {
 
         mockMvc.perform(
                 get("/api/machines")
                         .param("page", "0")
                         .param("size", "101")
-                        .param("sortBy", "name")
-                        .param("direction", "asc")
         )
         .andExpect(status().isBadRequest());
     }

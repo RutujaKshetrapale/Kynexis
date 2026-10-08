@@ -4,62 +4,118 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import org.springframework.http.MediaType;
 
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.example.demo.SpringBootFactoryApplication;
 import com.example.demo.entity.Machine;
 import com.example.demo.entity.Sensor;
+import com.example.demo.exception.GlobalExceptionHandler;
 import com.example.demo.service.SensorService;
 
-@SpringBootTest(
-        classes = SpringBootFactoryApplication.class
-)
-@AutoConfigureMockMvc(addFilters = false)
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@ExtendWith(MockitoExtension.class)
 class SensorControllerMockMvcTest {
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @Mock
     private SensorService sensorService;
+
+    private ObjectMapper objectMapper;
+
+    private SensorController sensorController;
+
+    @BeforeEach
+    void setUp() {
+
+        objectMapper = new ObjectMapper();
+
+        sensorController = new SensorController(sensorService);
+
+        mockMvc = MockMvcBuilders
+                .standaloneSetup(sensorController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
+
+    private Sensor createSensor(
+            Long id,
+            String name,
+            String type,
+            String unit,
+            boolean active) {
+
+        Sensor sensor = new Sensor();
+
+        sensor.setId(id);
+        sensor.setName(name);
+        sensor.setType(type);
+        sensor.setUnit(unit);
+        sensor.setActive(active);
+
+        return sensor;
+    }
+
+    private Sensor createSensorWithMachine(
+            Long id,
+            String name,
+            String type,
+            String unit,
+            boolean active) {
+
+        Sensor sensor = createSensor(
+                id,
+                name,
+                type,
+                unit,
+                active
+        );
+
+        Machine machine = new Machine();
+
+        sensor.setMachine(machine);
+
+        return sensor;
+    }
 
     @Test
     @DisplayName("Should create sensor successfully")
     void shouldCreateSensorSuccessfully() throws Exception {
 
-        Machine machine = new Machine();
-
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
-        sensor.setType("TEMPERATURE");
-        sensor.setUnit("°C");
-        sensor.setActive(true);
-        sensor.setMachine(machine);
+        Sensor sensor = createSensorWithMachine(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         when(sensorService.create(any()))
                 .thenReturn(sensor);
@@ -92,13 +148,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get sensor by ID successfully")
     void shouldGetSensorByIdSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
-        sensor.setType("TEMPERATURE");
-        sensor.setUnit("°C");
-        sensor.setActive(true);
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         when(sensorService.getById(eq(1L)))
                 .thenReturn(sensor);
@@ -119,13 +175,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get all sensors with pagination successfully")
     void shouldGetAllSensorsSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
-        sensor.setType("TEMPERATURE");
-        sensor.setUnit("°C");
-        sensor.setActive(true);
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -133,7 +189,7 @@ class SensorControllerMockMvcTest {
                 1
         );
 
-        when(sensorService.getAll(any()))
+        when(sensorService.getAll(any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(
@@ -162,10 +218,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get sensors by machine successfully")
     void shouldGetSensorsByMachineSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -175,7 +234,7 @@ class SensorControllerMockMvcTest {
 
         when(sensorService.getByMachine(
                 eq(1L),
-                any()
+                any(Pageable.class)
         ))
         .thenReturn(page);
 
@@ -196,11 +255,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get active sensors successfully")
     void shouldGetActiveSensorsSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
-        sensor.setActive(true);
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -208,7 +269,7 @@ class SensorControllerMockMvcTest {
                 1
         );
 
-        when(sensorService.getActive(any()))
+        when(sensorService.getActive(any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(
@@ -229,11 +290,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get inactive sensors successfully")
     void shouldGetInactiveSensorsSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(2L);
-        sensor.setName("Pressure Sensor");
-        sensor.setActive(false);
+        Sensor sensor = createSensor(
+                2L,
+                "Pressure Sensor",
+                "PRESSURE",
+                "bar",
+                false
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -241,7 +304,7 @@ class SensorControllerMockMvcTest {
                 1
         );
 
-        when(sensorService.getInactive(any()))
+        when(sensorService.getInactive(any(Pageable.class)))
                 .thenReturn(page);
 
         mockMvc.perform(
@@ -262,11 +325,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get sensors by type successfully")
     void shouldGetSensorsByTypeSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
-        sensor.setType("TEMPERATURE");
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -276,7 +341,7 @@ class SensorControllerMockMvcTest {
 
         when(sensorService.getByType(
                 eq("TEMPERATURE"),
-                any()
+                any(Pageable.class)
         ))
         .thenReturn(page);
 
@@ -297,11 +362,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should get sensors by machine and type successfully")
     void shouldGetSensorsByMachineAndTypeSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
-        sensor.setType("TEMPERATURE");
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -312,7 +379,7 @@ class SensorControllerMockMvcTest {
         when(sensorService.getByMachineAndType(
                 eq(1L),
                 eq("TEMPERATURE"),
-                any()
+                any(Pageable.class)
         ))
         .thenReturn(page);
 
@@ -333,10 +400,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should search sensors by name successfully")
     void shouldSearchSensorsByNameSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Temperature Sensor");
+        Sensor sensor = createSensor(
+                1L,
+                "Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         PageImpl<Sensor> page = new PageImpl<>(
                 List.of(sensor),
@@ -346,7 +416,7 @@ class SensorControllerMockMvcTest {
 
         when(sensorService.searchByName(
                 eq("Temperature"),
-                any()
+                any(Pageable.class)
         ))
         .thenReturn(page);
 
@@ -368,13 +438,13 @@ class SensorControllerMockMvcTest {
     @DisplayName("Should update sensor successfully")
     void shouldUpdateSensorSuccessfully() throws Exception {
 
-        Sensor sensor = new Sensor();
-
-        sensor.setId(1L);
-        sensor.setName("Updated Temperature Sensor");
-        sensor.setType("TEMPERATURE");
-        sensor.setUnit("°C");
-        sensor.setActive(true);
+        Sensor sensor = createSensor(
+                1L,
+                "Updated Temperature Sensor",
+                "TEMPERATURE",
+                "°C",
+                true
+        );
 
         when(sensorService.update(
                 eq(1L),

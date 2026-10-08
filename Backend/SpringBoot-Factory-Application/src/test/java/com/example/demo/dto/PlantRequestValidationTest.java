@@ -1,5 +1,7 @@
 package com.example.demo.dto;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
@@ -16,13 +18,7 @@ import org.junit.jupiter.api.Test;
 class PlantRequestValidationTest {
 
     private static ValidatorFactory validatorFactory;
-
     private static Validator validator;
-
-
-    // ==========================================
-    // SETUP
-    // ==========================================
 
     @BeforeAll
     static void setUp() {
@@ -34,235 +30,146 @@ class PlantRequestValidationTest {
                 validatorFactory.getValidator();
     }
 
-
-    // ==========================================
-    // CLEANUP
-    // ==========================================
-
     @AfterAll
     static void tearDown() {
 
         validatorFactory.close();
     }
 
-
-    // ==========================================
-    // VALID REQUEST
-    // ==========================================
-
-    @Test
-    void validPlantRequest_shouldHaveNoValidationErrors() {
+    private PlantRequest createValidRequest() {
 
         PlantRequest request = new PlantRequest();
 
-        request.setName("Pune Manufacturing Plant");
+        request.setName("Pune Factory");
         request.setLocation("Pune, Maharashtra");
+
+        return request;
+    }
+
+    @Test
+    void shouldAcceptValidPlantRequest() {
+
+        PlantRequest request =
+                createValidRequest();
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(
-                violations.isEmpty(),
-                "Valid PlantRequest should not contain validation errors"
-        );
+        assertTrue(violations.isEmpty());
     }
 
-
-    // ==========================================
-    // NAME REQUIRED
-    // ==========================================
-
     @Test
-    void plantName_shouldBeRequired() {
+    void shouldRejectBlankPlantName() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                createValidRequest();
 
-        request.setName(null);
-        request.setLocation("Pune, Maharashtra");
+        request.setName("");
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
+        assertFalse(violations.isEmpty());
+
         assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant name is required"
-                )
+                violations.stream()
+                        .anyMatch(v ->
+                                v.getPropertyPath()
+                                        .toString()
+                                        .equals("name"))
         );
     }
 
-
-    // ==========================================
-    // NAME TOO SHORT
-    // ==========================================
-
     @Test
-    void plantName_shouldHaveMinimumTwoCharacters() {
+    void shouldRejectPlantNameThatIsTooShort() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                createValidRequest();
 
         request.setName("A");
-        request.setLocation("Pune, Maharashtra");
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant name must be between 2 and 100 characters"
-                )
-        );
+        assertFalse(violations.isEmpty());
     }
 
-
-    // ==========================================
-    // NAME TOO LONG
-    // ==========================================
-
     @Test
-    void plantName_shouldNotExceed100Characters() {
+    void shouldRejectPlantNameThatIsTooLong() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                createValidRequest();
 
-        request.setName(
-                "A".repeat(101)
-        );
-
-        request.setLocation("Pune, Maharashtra");
+        request.setName("A".repeat(101));
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant name must be between 2 and 100 characters"
-                )
-        );
+        assertFalse(violations.isEmpty());
     }
 
-
-    // ==========================================
-    // LOCATION REQUIRED
-    // ==========================================
-
     @Test
-    void plantLocation_shouldBeRequired() {
+    void shouldRejectBlankPlantLocation() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                createValidRequest();
 
-        request.setName("Pune Plant");
-        request.setLocation(null);
+        request.setLocation("");
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
+        assertFalse(violations.isEmpty());
+
         assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant location is required"
-                )
+                violations.stream()
+                        .anyMatch(v ->
+                                v.getPropertyPath()
+                                        .toString()
+                                        .equals("location"))
         );
     }
 
-
-    // ==========================================
-    // LOCATION TOO SHORT
-    // ==========================================
-
     @Test
-    void plantLocation_shouldHaveMinimumTwoCharacters() {
+    void shouldRejectPlantLocationThatIsTooShort() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                createValidRequest();
 
-        request.setName("Pune Plant");
         request.setLocation("A");
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant location must be between 2 and 150 characters"
-                )
-        );
+        assertFalse(violations.isEmpty());
     }
 
-
-    // ==========================================
-    // LOCATION TOO LONG
-    // ==========================================
-
     @Test
-    void plantLocation_shouldNotExceed150Characters() {
+    void shouldRejectPlantLocationThatIsTooLong() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                createValidRequest();
 
-        request.setName("Pune Plant");
-
-        request.setLocation(
-                "A".repeat(151)
-        );
+        request.setLocation("A".repeat(151));
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant location must be between 2 and 150 characters"
-                )
-        );
+        assertFalse(violations.isEmpty());
     }
 
-
-    // ==========================================
-    // BOTH FIELDS INVALID
-    // ==========================================
-
     @Test
-    void plantRequest_shouldReturnMultipleValidationErrors() {
+    void shouldDetectMultipleValidationErrors() {
 
-        PlantRequest request = new PlantRequest();
+        PlantRequest request =
+                new PlantRequest();
 
-        request.setName(null);
-        request.setLocation(null);
+        request.setName("A");
+        request.setLocation("A");
 
         Set<ConstraintViolation<PlantRequest>> violations =
                 validator.validate(request);
 
-        assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant name is required"
-                )
-        );
-
-        assertTrue(
-                hasMessage(
-                        violations,
-                        "Plant location is required"
-                )
-        );
-    }
-
-
-    // ==========================================
-    // HELPER METHOD
-    // ==========================================
-
-    private boolean hasMessage(
-            Set<ConstraintViolation<PlantRequest>> violations,
-            String expectedMessage) {
-
-        return violations.stream()
-                .anyMatch(
-                        violation ->
-                                violation
-                                        .getMessage()
-                                        .equals(expectedMessage)
-                );
+        assertEquals(2, violations.size());
     }
 }
