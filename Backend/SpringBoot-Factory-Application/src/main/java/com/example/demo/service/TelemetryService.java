@@ -14,6 +14,9 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.TelemetryRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class TelemetryService {
 
@@ -33,13 +36,14 @@ public class TelemetryService {
 
     public Telemetry create(TelemetryRequest request) {
 
+        log.info("Receiving telemetry machineId={}", request.getMachineId());
+
         Machine machine = machineRepository
                 .findById(request.getMachineId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MACHINE NOT FOUND: "
-                                + request.getMachineId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to save telemetry: machine not found machineId={}", request.getMachineId());
+                    return new ResourceNotFoundException("MACHINE NOT FOUND: " + request.getMachineId());
+                });
 
         domainValidationService.validateTelemetry(
                 request.getTemperature(),
@@ -57,7 +61,9 @@ public class TelemetryService {
         telemetry.setRpm(request.getRpm());
         telemetry.setTimestamp(request.getTimestamp());
 
-        return telemetryRepository.save(telemetry);
+        Telemetry savedTelemetry = telemetryRepository.save(telemetry);
+        log.info("Telemetry saved successfully id={} machineId={}", savedTelemetry.getId(), request.getMachineId());
+        return savedTelemetry;
     }
 
     public List<Telemetry> getAll() {
@@ -72,10 +78,10 @@ public class TelemetryService {
 
         return telemetryRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "TELEMETRY NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Telemetry not found id={}", id);
+                    return new ResourceNotFoundException("TELEMETRY NOT FOUND: " + id);
+                });
     }
 
     public List<Telemetry> getByMachine(Long machineId) {
@@ -164,9 +170,10 @@ public class TelemetryService {
     private void validateMachine(Long machineId) {
 
         if (!machineRepository.existsById(machineId)) {
+            log.warn("Machine not found machineId={}", machineId);
             throw new ResourceNotFoundException(
                     "MACHINE NOT FOUND: " + machineId
             );
         }
     }
-}
+}

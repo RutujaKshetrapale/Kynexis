@@ -13,6 +13,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -24,6 +27,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleResourceNotFound(
             ResourceNotFoundException ex,
             HttpServletRequest request) {
+
+        log.warn("Resource not found path={} message={}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
@@ -47,6 +52,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleValidationException(
             MethodArgumentNotValidException ex,
             HttpServletRequest request) {
+
+        log.warn("Request validation failed path={} errorsCount={}", request.getRequestURI(), ex.getBindingResult().getErrorCount());
 
         Map<String, String> validationErrors = new HashMap<>();
 
@@ -106,6 +113,8 @@ public class GlobalExceptionHandler {
             AccessDeniedException ex,
             HttpServletRequest request) {
 
+        log.warn("Access denied path={} message={}", request.getRequestURI(), ex.getMessage());
+
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.FORBIDDEN.value(),
@@ -123,6 +132,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleBusinessValidation(
             BusinessValidationException ex,
             HttpServletRequest request) {
+
+        log.warn("Business validation failed path={} message={}", request.getRequestURI(), ex.getMessage());
 
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
@@ -147,6 +158,8 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request) {
 
+        log.error("Unexpected exception path={} message={}", request.getRequestURI(), ex.getMessage(), ex);
+
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -160,3 +173,4 @@ public class GlobalExceptionHandler {
                 .body(error);
     }
 }
+

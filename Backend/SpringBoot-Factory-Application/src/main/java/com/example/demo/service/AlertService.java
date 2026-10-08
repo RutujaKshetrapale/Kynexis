@@ -14,6 +14,9 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.AlertRepository;
 import com.example.demo.repository.MachineRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class AlertService {
 
@@ -34,13 +37,14 @@ public class AlertService {
 
     public Alert create(AlertRequest request) {
 
+        log.info("Creating alert machineId={} severity={} type={}", request.getMachineId(), request.getSeverity(), request.getType());
+
         Machine machine = machineRepository
                 .findById(request.getMachineId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MACHINE NOT FOUND: "
-                                + request.getMachineId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to create alert: machine not found machineId={}", request.getMachineId());
+                    return new ResourceNotFoundException("MACHINE NOT FOUND: " + request.getMachineId());
+                });
 
         Alert alert = new Alert();
 
@@ -51,7 +55,9 @@ public class AlertService {
         alert.setResolved(request.isResolved());
         alert.setCreatedAt(LocalDateTime.now());
 
-        return alertRepository.save(alert);
+        Alert savedAlert = alertRepository.save(alert);
+        log.info("Alert created successfully id={} machineId={}", savedAlert.getId(), request.getMachineId());
+        return savedAlert;
     }
 
     // =========================
@@ -80,10 +86,10 @@ public class AlertService {
 
         return alertRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "ALERT NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Alert not found id={}", id);
+                    return new ResourceNotFoundException("ALERT NOT FOUND: " + id);
+                });
     }
 
     // =========================
@@ -93,7 +99,7 @@ public class AlertService {
     public List<Alert> getByMachine(Long machineId) {
 
         if (!machineRepository.existsById(machineId)) {
-
+            log.warn("Failed to fetch alerts: machine not found machineId={}", machineId);
             throw new ResourceNotFoundException(
                     "MACHINE NOT FOUND: " + machineId
             );
@@ -112,7 +118,7 @@ public class AlertService {
             Pageable pageable) {
 
         if (!machineRepository.existsById(machineId)) {
-
+            log.warn("Failed to fetch alerts: machine not found machineId={}", machineId);
             throw new ResourceNotFoundException(
                     "MACHINE NOT FOUND: " + machineId
             );
@@ -175,20 +181,21 @@ public class AlertService {
             Long id,
             AlertRequest request) {
 
+        log.info("Updating alert id={} resolved={}", id, request.isResolved());
+
         Alert alert = alertRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "ALERT NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to update alert: alert not found id={}", id);
+                    return new ResourceNotFoundException("ALERT NOT FOUND: " + id);
+                });
 
         Machine machine = machineRepository
                 .findById(request.getMachineId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MACHINE NOT FOUND: "
-                                + request.getMachineId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to update alert id={}: machine not found machineId={}", id, request.getMachineId());
+                    return new ResourceNotFoundException("MACHINE NOT FOUND: " + request.getMachineId());
+                });
 
         alert.setMachine(machine);
         alert.setType(request.getType());
@@ -196,7 +203,9 @@ public class AlertService {
         alert.setSeverity(request.getSeverity());
         alert.setResolved(request.isResolved());
 
-        return alertRepository.save(alert);
+        Alert updatedAlert = alertRepository.save(alert);
+        log.info("Alert updated successfully id={}", id);
+        return updatedAlert;
     }
 
     // =========================
@@ -205,13 +214,16 @@ public class AlertService {
 
     public void delete(Long id) {
 
+        log.info("Deleting alert id={}", id);
+
         Alert alert = alertRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "ALERT NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to delete alert: alert not found id={}", id);
+                    return new ResourceNotFoundException("ALERT NOT FOUND: " + id);
+                });
 
         alertRepository.delete(alert);
+        log.info("Alert deleted successfully id={}", id);
     }
-}
+}

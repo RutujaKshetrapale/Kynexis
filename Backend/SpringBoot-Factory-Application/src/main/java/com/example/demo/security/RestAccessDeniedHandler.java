@@ -9,7 +9,9 @@ import org.springframework.stereotype.Component;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class RestAccessDeniedHandler
         implements AccessDeniedHandler {
@@ -20,6 +22,8 @@ public class RestAccessDeniedHandler
             HttpServletResponse response,
             AccessDeniedException accessDeniedException)
             throws IOException {
+
+        log.warn("Access denied path={} message={}", request.getRequestURI(), accessDeniedException.getMessage());
 
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -39,4 +43,4 @@ public class RestAccessDeniedHandler
 
         response.getWriter().write(json);
     }
-}
+}

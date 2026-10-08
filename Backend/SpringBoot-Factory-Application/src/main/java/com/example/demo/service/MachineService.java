@@ -14,6 +14,9 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.PlantRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class MachineService {
 
@@ -33,13 +36,14 @@ public class MachineService {
 
     public Machine create(MachineRequest request) {
 
+        log.info("Creating machine name={} plantId={}", request.getName(), request.getPlantId());
+
         Plant plant = plantRepository
                 .findById(request.getPlantId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "PLANT NOT FOUND: "
-                                + request.getPlantId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to create machine: plant not found plantId={}", request.getPlantId());
+                    return new ResourceNotFoundException("PLANT NOT FOUND: " + request.getPlantId());
+                });
 
         domainValidationService.validateMachineStatus(
                 request.getStatus()
@@ -54,7 +58,9 @@ public class MachineService {
         );
         machine.setPlant(plant);
 
-        return machineRepository.save(machine);
+        Machine savedMachine = machineRepository.save(machine);
+        log.info("Machine created successfully id={} name={}", savedMachine.getId(), savedMachine.getName());
+        return savedMachine;
     }
 
     public List<Machine> getAll() {
@@ -69,15 +75,16 @@ public class MachineService {
 
         return machineRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MACHINE NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Machine not found id={}", id);
+                    return new ResourceNotFoundException("MACHINE NOT FOUND: " + id);
+                });
     }
 
     public List<Machine> getByPlant(Long plantId) {
 
         if (!plantRepository.existsById(plantId)) {
+            log.warn("Failed to fetch machines: plant not found plantId={}", plantId);
             throw new ResourceNotFoundException(
                     "PLANT NOT FOUND: " + plantId
             );
@@ -91,6 +98,7 @@ public class MachineService {
             Pageable pageable) {
 
         if (!plantRepository.existsById(plantId)) {
+            log.warn("Failed to fetch machines: plant not found plantId={}", plantId);
             throw new ResourceNotFoundException(
                     "PLANT NOT FOUND: " + plantId
             );
@@ -127,6 +135,7 @@ public class MachineService {
             String status) {
 
         if (!plantRepository.existsById(plantId)) {
+            log.warn("Failed to fetch machines: plant not found plantId={}", plantId);
             throw new ResourceNotFoundException(
                     "PLANT NOT FOUND: " + plantId
             );
@@ -147,6 +156,7 @@ public class MachineService {
             Pageable pageable) {
 
         if (!plantRepository.existsById(plantId)) {
+            log.warn("Failed to fetch machines: plant not found plantId={}", plantId);
             throw new ResourceNotFoundException(
                     "PLANT NOT FOUND: " + plantId
             );
@@ -182,15 +192,16 @@ public class MachineService {
             Long id,
             MachineRequest request) {
 
+        log.info("Updating machine id={} name={}", id, request.getName());
+
         Machine machine = getById(id);
 
         Plant plant = plantRepository
                 .findById(request.getPlantId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "PLANT NOT FOUND: "
-                                + request.getPlantId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to update machine id={}: plant not found plantId={}", id, request.getPlantId());
+                    return new ResourceNotFoundException("PLANT NOT FOUND: " + request.getPlantId());
+                });
 
         domainValidationService.validateMachineStatus(
                 request.getStatus()
@@ -203,13 +214,18 @@ public class MachineService {
         );
         machine.setPlant(plant);
 
-        return machineRepository.save(machine);
+        Machine updatedMachine = machineRepository.save(machine);
+        log.info("Machine updated successfully id={}", id);
+        return updatedMachine;
     }
 
     public void delete(Long id) {
 
+        log.info("Deleting machine id={}", id);
+
         Machine machine = getById(id);
 
         machineRepository.delete(machine);
+        log.info("Machine deleted successfully id={}", id);
     }
-}
+}

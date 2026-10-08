@@ -11,6 +11,9 @@ import com.example.demo.entity.User;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.security.JwtService;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class AuthService {
 
@@ -30,7 +33,10 @@ public class AuthService {
 
     public User register(RegisterRequest request) {
 
+        log.info("Registering user username={} email={}", request.getUsername(), request.getEmail());
+
         if (userRepository.existsByUsername(request.getUsername())) {
+            log.warn("Registration failed username={}: username already exists", request.getUsername());
             throw new RuntimeException(
                     "USERNAME ALREADY EXISTS: "
                     + request.getUsername()
@@ -38,6 +44,7 @@ public class AuthService {
         }
 
         if (userRepository.existsByEmail(request.getEmail())) {
+            log.warn("Registration failed email={}: email already exists", request.getEmail());
             throw new RuntimeException(
                     "EMAIL ALREADY EXISTS: "
                     + request.getEmail()
@@ -59,20 +66,24 @@ public class AuthService {
 
         user.setActive(true);
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        log.info("User registered successfully username={} role={}", savedUser.getUsername(), savedUser.getRole());
+        return savedUser;
     }
 
     public LoginResponse login(LoginRequest request) {
 
+        log.info("Login attempt username={}", request.getUsername());
+
         User user = userRepository
                 .findByUsername(request.getUsername())
-                .orElseThrow(() ->
-                        new RuntimeException(
-                                "INVALID USERNAME OR PASSWORD"
-                        )
-                );
+                .orElseThrow(() -> {
+                    log.warn("Login failed username={}: invalid username or password", request.getUsername());
+                    return new RuntimeException("INVALID USERNAME OR PASSWORD");
+                });
 
         if (!user.isActive()) {
+            log.warn("Login failed username={}: user account inactive", request.getUsername());
             throw new RuntimeException(
                     "USER ACCOUNT IS INACTIVE"
             );
@@ -82,12 +93,14 @@ public class AuthService {
                 request.getPassword(),
                 user.getPassword())) {
 
+            log.warn("Login failed username={}: invalid username or password", request.getUsername());
             throw new RuntimeException(
                     "INVALID USERNAME OR PASSWORD"
             );
         }
 
         String token = jwtService.generateToken(user);
+        log.info("Login successful username={} role={}", user.getUsername(), user.getRole().name());
 
         return new LoginResponse(
                 token,
@@ -95,4 +108,4 @@ public class AuthService {
                 user.getRole().name()
         );
     }
-}
+}

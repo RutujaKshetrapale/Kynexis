@@ -13,7 +13,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -71,10 +73,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder
                             .getContext()
                             .setAuthentication(authentication);
+
+                    log.debug("JWT authenticated user={} role={} path={}", username, role, request.getRequestURI());
                 }
             }
 
         } catch (Exception ex) {
+
+            log.warn("JWT authentication failed path={}: {}", request.getRequestURI(), ex.getMessage());
 
             SecurityContextHolder
                     .clearContext();
@@ -82,4 +88,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         filterChain.doFilter(request, response);
     }
-}
+}

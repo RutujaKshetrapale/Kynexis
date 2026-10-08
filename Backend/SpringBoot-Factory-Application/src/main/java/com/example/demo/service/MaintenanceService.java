@@ -14,6 +14,9 @@ import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.MaintenanceRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class MaintenanceService {
 
@@ -34,13 +37,14 @@ public class MaintenanceService {
 
     public Maintenance create(MaintenanceRequest request) {
 
+        log.info("Scheduling maintenance machineId={} type={} technician={}", request.getMachineId(), request.getType(), request.getTechnician());
+
         Machine machine = machineRepository
                 .findById(request.getMachineId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MACHINE NOT FOUND: "
-                                + request.getMachineId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to schedule maintenance: machine not found machineId={}", request.getMachineId());
+                    return new ResourceNotFoundException("MACHINE NOT FOUND: " + request.getMachineId());
+                });
 
         Maintenance maintenance = new Maintenance();
 
@@ -57,7 +61,9 @@ public class MaintenanceService {
         maintenance.setTechnician(request.getTechnician());
         maintenance.setCreatedAt(LocalDateTime.now());
 
-        return maintenanceRepository.save(maintenance);
+        Maintenance savedMaintenance = maintenanceRepository.save(maintenance);
+        log.info("Maintenance scheduled successfully id={} machineId={}", savedMaintenance.getId(), request.getMachineId());
+        return savedMaintenance;
     }
 
     // =========================
@@ -86,10 +92,10 @@ public class MaintenanceService {
 
         return maintenanceRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MAINTENANCE NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Maintenance not found id={}", id);
+                    return new ResourceNotFoundException("MAINTENANCE NOT FOUND: " + id);
+                });
     }
 
     // =========================
@@ -100,7 +106,7 @@ public class MaintenanceService {
             Long machineId) {
 
         if (!machineRepository.existsById(machineId)) {
-
+            log.warn("Failed to fetch maintenance: machine not found machineId={}", machineId);
             throw new ResourceNotFoundException(
                     "MACHINE NOT FOUND: " + machineId
             );
@@ -119,7 +125,7 @@ public class MaintenanceService {
             Pageable pageable) {
 
         if (!machineRepository.existsById(machineId)) {
-
+            log.warn("Failed to fetch maintenance: machine not found machineId={}", machineId);
             throw new ResourceNotFoundException(
                     "MACHINE NOT FOUND: " + machineId
             );
@@ -197,22 +203,22 @@ public class MaintenanceService {
             Long id,
             MaintenanceRequest request) {
 
+        log.info("Updating maintenance id={} status={}", id, request.getStatus());
+
         Maintenance maintenance =
                 maintenanceRepository
                         .findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "MAINTENANCE NOT FOUND: "
-                                        + id
-                                ));
+                        .orElseThrow(() -> {
+                            log.warn("Failed to update maintenance: record not found id={}", id);
+                            return new ResourceNotFoundException("MAINTENANCE NOT FOUND: " + id);
+                        });
 
         Machine machine = machineRepository
                 .findById(request.getMachineId())
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "MACHINE NOT FOUND: "
-                                + request.getMachineId()
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Failed to update maintenance id={}: machine not found machineId={}", id, request.getMachineId());
+                    return new ResourceNotFoundException("MACHINE NOT FOUND: " + request.getMachineId());
+                });
 
         maintenance.setMachine(machine);
         maintenance.setType(request.getType());
@@ -230,7 +236,9 @@ public class MaintenanceService {
                 request.getTechnician()
         );
 
-        return maintenanceRepository.save(maintenance);
+        Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);
+        log.info("Maintenance updated successfully id={}", id);
+        return updatedMaintenance;
     }
 
     // =========================
@@ -239,15 +247,17 @@ public class MaintenanceService {
 
     public void delete(Long id) {
 
+        log.info("Deleting maintenance id={}", id);
+
         Maintenance maintenance =
                 maintenanceRepository
                         .findById(id)
-                        .orElseThrow(() ->
-                                new ResourceNotFoundException(
-                                        "MAINTENANCE NOT FOUND: "
-                                        + id
-                                ));
+                        .orElseThrow(() -> {
+                            log.warn("Failed to delete maintenance: record not found id={}", id);
+                            return new ResourceNotFoundException("MAINTENANCE NOT FOUND: " + id);
+                        });
 
         maintenanceRepository.delete(maintenance);
+        log.info("Maintenance deleted successfully id={}", id);
     }
-}
+}

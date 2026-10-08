@@ -12,6 +12,9 @@ import com.example.demo.exception.BusinessValidationException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.PlantRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class PlantService {
 
@@ -23,9 +26,12 @@ public class PlantService {
 
     public Plant create(PlantRequest request) {
 
+        log.info("Creating plant name={} location={}", request.getName(), request.getLocation());
+
         if (plantRepository.existsByNameIgnoreCase(
                 request.getName().trim())) {
 
+            log.warn("Failed to create plant: name already exists name={}", request.getName());
             throw new BusinessValidationException(
                     "Plant with this name already exists"
             );
@@ -37,7 +43,9 @@ public class PlantService {
         plant.setLocation(request.getLocation().trim());
         plant.setActive(true);
 
-        return plantRepository.save(plant);
+        Plant savedPlant = plantRepository.save(plant);
+        log.info("Plant created successfully id={} name={}", savedPlant.getId(), savedPlant.getName());
+        return savedPlant;
     }
 
     public List<Plant> getAll() {
@@ -52,10 +60,10 @@ public class PlantService {
 
         return plantRepository
                 .findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "PLANT NOT FOUND: " + id
-                        ));
+                .orElseThrow(() -> {
+                    log.warn("Plant not found id={}", id);
+                    return new ResourceNotFoundException("PLANT NOT FOUND: " + id);
+                });
     }
 
     public List<Plant> getActive() {
@@ -110,6 +118,8 @@ public class PlantService {
             Long id,
             PlantRequest request) {
 
+        log.info("Updating plant id={} name={}", id, request.getName());
+
         Plant plant = getById(id);
 
         if (!plant.getName().equalsIgnoreCase(
@@ -117,6 +127,7 @@ public class PlantService {
                 && plantRepository.existsByNameIgnoreCase(
                         request.getName().trim())) {
 
+            log.warn("Failed to update plant id={}: name already exists name={}", id, request.getName());
             throw new BusinessValidationException(
                     "Plant with this name already exists"
             );
@@ -125,13 +136,18 @@ public class PlantService {
         plant.setName(request.getName().trim());
         plant.setLocation(request.getLocation().trim());
 
-        return plantRepository.save(plant);
+        Plant updatedPlant = plantRepository.save(plant);
+        log.info("Plant updated successfully id={}", id);
+        return updatedPlant;
     }
 
     public void delete(Long id) {
 
+        log.info("Deleting plant id={}", id);
+
         Plant plant = getById(id);
 
         plantRepository.delete(plant);
+        log.info("Plant deleted successfully id={}", id);
     }
-}
+}

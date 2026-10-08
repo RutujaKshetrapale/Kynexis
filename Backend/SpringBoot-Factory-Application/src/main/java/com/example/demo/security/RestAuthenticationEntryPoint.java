@@ -12,7 +12,9 @@ import com.example.demo.exception.ErrorResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
 public class RestAuthenticationEntryPoint
         implements AuthenticationEntryPoint {
@@ -23,6 +25,8 @@ public class RestAuthenticationEntryPoint
             HttpServletResponse response,
             AuthenticationException authException)
             throws IOException {
+
+        log.warn("Unauthorized request path={} message={}", request.getRequestURI(), authException.getMessage());
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
@@ -42,4 +46,4 @@ public class RestAuthenticationEntryPoint
 
         response.getWriter().write(json);
     }
-}
+}
