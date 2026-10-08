@@ -4,15 +4,19 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.example.demo.entity.Role;
+import com.example.demo.entity.User;
+import com.example.demo.security.JwtService;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -22,6 +26,22 @@ class ActuatorIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private JwtService jwtService;
+
+    private String validJwtToken;
+
+    @BeforeEach
+    void setUp() {
+        User adminUser = new User();
+        adminUser.setUsername("admin_actuator");
+        adminUser.setEmail("admin_actuator@example.com");
+        adminUser.setRole(Role.ADMIN);
+        adminUser.setActive(true);
+
+        validJwtToken = jwtService.generateToken(adminUser);
+    }
 
     @Test
     @DisplayName("GET /actuator/health returns 200 OK and status UP")
@@ -48,28 +68,28 @@ class ActuatorIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    @DisplayName("GET /actuator/metrics with authentication returns 200 OK and metric names")
+    @DisplayName("GET /actuator/metrics with valid JWT returns 200 OK and metric names")
     void testMetricsEndpointAuthenticatedReturns200() throws Exception {
-        mockMvc.perform(get("/actuator/metrics"))
+        mockMvc.perform(get("/actuator/metrics")
+                        .header("Authorization", "Bearer " + validJwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.names").exists());
     }
 
     @Test
-    @WithMockUser(username = "admin", roles = {"ADMIN"})
-    @DisplayName("GET /actuator/metrics/jvm.memory.used with authentication returns 200 OK")
+    @DisplayName("GET /actuator/metrics/jvm.memory.used with valid JWT returns 200 OK")
     void testSpecificMetricAuthenticatedReturns200() throws Exception {
-        mockMvc.perform(get("/actuator/metrics/jvm.memory.used"))
+        mockMvc.perform(get("/actuator/metrics/jvm.memory.used")
+                        .header("Authorization", "Bearer " + validJwtToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("jvm.memory.used"));
     }
 
     @Test
-    @DisplayName("GET /actuator/env is not exposed and returns 404")
-    void testUnexposedEndpointReturnsNotFound() throws Exception {
+    @DisplayName("GET /actuator/env is unexposed and returns 401 when unauthenticated")
+    void testUnexposedEndpointReturnsUnauthorized() throws Exception {
         mockMvc.perform(get("/actuator/env"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

@@ -23,9 +23,9 @@ public class GlobalExceptionHandler {
     // 404 - RESOURCE NOT FOUND
     // ==========================================
 
-    @ExceptionHandler(ResourceNotFoundException.class)
+    @ExceptionHandler({ResourceNotFoundException.class, org.springframework.web.servlet.resource.NoResourceFoundException.class})
     public ResponseEntity<ErrorResponse> handleResourceNotFound(
-            ResourceNotFoundException ex,
+            Exception ex,
             HttpServletRequest request) {
 
         log.warn("Resource not found path={} message={}", request.getRequestURI(), ex.getMessage());
@@ -42,6 +42,31 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(error);
     }
+
+    // ==========================================
+    // 401 - UNAUTHORIZED
+    // ==========================================
+
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex,
+            HttpServletRequest request) {
+
+        log.warn("Authentication failed path={} message={}", request.getRequestURI(), ex.getMessage());
+
+        ErrorResponse error = new ErrorResponse(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "UNAUTHORIZED",
+                "Authentication is required to access this resource",
+                request.getRequestURI()
+        );
+
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(error);
+    }
+
 
 
     // ==========================================
