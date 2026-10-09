@@ -44,6 +44,9 @@ class MaintenanceServiceTest {
     @Mock
     private MachineRepository machineRepository;
 
+    @Mock
+    private WebSocketEventPublisherService webSocketEventPublisherService;
+
     @InjectMocks
     private MaintenanceService maintenanceService;
 

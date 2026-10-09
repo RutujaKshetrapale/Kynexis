@@ -22,13 +22,16 @@ public class AlertService {
 
     private final AlertRepository alertRepository;
     private final MachineRepository machineRepository;
+    private final WebSocketEventPublisherService webSocketEventPublisherService;
 
     public AlertService(
             AlertRepository alertRepository,
-            MachineRepository machineRepository) {
+            MachineRepository machineRepository,
+            WebSocketEventPublisherService webSocketEventPublisherService) {
 
         this.alertRepository = alertRepository;
         this.machineRepository = machineRepository;
+        this.webSocketEventPublisherService = webSocketEventPublisherService;
     }
 
     // =========================
@@ -57,6 +60,7 @@ public class AlertService {
 
         Alert savedAlert = alertRepository.save(alert);
         log.info("Alert created successfully id={} machineId={}", savedAlert.getId(), request.getMachineId());
+        webSocketEventPublisherService.publishAlert(savedAlert);
         return savedAlert;
     }
 
@@ -205,6 +209,7 @@ public class AlertService {
 
         Alert updatedAlert = alertRepository.save(alert);
         log.info("Alert updated successfully id={}", id);
+        webSocketEventPublisherService.publishAlert(updatedAlert);
         return updatedAlert;
     }
 

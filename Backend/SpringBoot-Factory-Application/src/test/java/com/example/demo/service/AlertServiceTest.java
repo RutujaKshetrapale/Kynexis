@@ -43,6 +43,9 @@ class AlertServiceTest {
     @Mock
     private MachineRepository machineRepository;
 
+    @Mock
+    private WebSocketEventPublisherService webSocketEventPublisherService;
+
     @InjectMocks
     private AlertService alertService;
 

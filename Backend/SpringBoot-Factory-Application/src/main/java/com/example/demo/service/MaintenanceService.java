@@ -22,13 +22,16 @@ public class MaintenanceService {
 
     private final MaintenanceRepository maintenanceRepository;
     private final MachineRepository machineRepository;
+    private final WebSocketEventPublisherService webSocketEventPublisherService;
 
     public MaintenanceService(
             MaintenanceRepository maintenanceRepository,
-            MachineRepository machineRepository) {
+            MachineRepository machineRepository,
+            WebSocketEventPublisherService webSocketEventPublisherService) {
 
         this.maintenanceRepository = maintenanceRepository;
         this.machineRepository = machineRepository;
+        this.webSocketEventPublisherService = webSocketEventPublisherService;
     }
 
     // =========================
@@ -63,6 +66,7 @@ public class MaintenanceService {
 
         Maintenance savedMaintenance = maintenanceRepository.save(maintenance);
         log.info("Maintenance scheduled successfully id={} machineId={}", savedMaintenance.getId(), request.getMachineId());
+        webSocketEventPublisherService.publishMaintenance(savedMaintenance);
         return savedMaintenance;
     }
 
@@ -238,6 +242,7 @@ public class MaintenanceService {
 
         Maintenance updatedMaintenance = maintenanceRepository.save(maintenance);
         log.info("Maintenance updated successfully id={}", id);
+        webSocketEventPublisherService.publishMaintenance(updatedMaintenance);
         return updatedMaintenance;
     }
 

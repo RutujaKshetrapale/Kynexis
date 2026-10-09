@@ -23,15 +23,18 @@ public class MachineService {
     private final MachineRepository machineRepository;
     private final PlantRepository plantRepository;
     private final DomainValidationService domainValidationService;
+    private final WebSocketEventPublisherService webSocketEventPublisherService;
 
     public MachineService(
             MachineRepository machineRepository,
             PlantRepository plantRepository,
-            DomainValidationService domainValidationService) {
+            DomainValidationService domainValidationService,
+            WebSocketEventPublisherService webSocketEventPublisherService) {
 
         this.machineRepository = machineRepository;
         this.plantRepository = plantRepository;
         this.domainValidationService = domainValidationService;
+        this.webSocketEventPublisherService = webSocketEventPublisherService;
     }
 
     public Machine create(MachineRequest request) {
@@ -60,6 +63,7 @@ public class MachineService {
 
         Machine savedMachine = machineRepository.save(machine);
         log.info("Machine created successfully id={} name={}", savedMachine.getId(), savedMachine.getName());
+        webSocketEventPublisherService.publishMachineStatus(savedMachine);
         return savedMachine;
     }
 
@@ -216,6 +220,7 @@ public class MachineService {
 
         Machine updatedMachine = machineRepository.save(machine);
         log.info("Machine updated successfully id={}", id);
+        webSocketEventPublisherService.publishMachineStatus(updatedMachine);
         return updatedMachine;
     }
 

@@ -85,6 +85,9 @@ public class SecurityConfig {
                     "/actuator/info"
                 ).permitAll()
 
+                // WebSocket handshake endpoint
+                .requestMatchers("/ws/**").permitAll()
+
                 // All other APIs require JWT
                 .anyRequest().authenticated()
             )

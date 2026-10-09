@@ -47,6 +47,9 @@ class TelemetryServiceTest {
     @Mock
     private DomainValidationService domainValidationService;
 
+    @Mock
+    private WebSocketEventPublisherService webSocketEventPublisherService;
+
     @InjectMocks
     private TelemetryService telemetryService;
 

@@ -23,15 +23,18 @@ public class TelemetryService {
     private final TelemetryRepository telemetryRepository;
     private final MachineRepository machineRepository;
     private final DomainValidationService domainValidationService;
+    private final WebSocketEventPublisherService webSocketEventPublisherService;
 
     public TelemetryService(
             TelemetryRepository telemetryRepository,
             MachineRepository machineRepository,
-            DomainValidationService domainValidationService) {
+            DomainValidationService domainValidationService,
+            WebSocketEventPublisherService webSocketEventPublisherService) {
 
         this.telemetryRepository = telemetryRepository;
         this.machineRepository = machineRepository;
         this.domainValidationService = domainValidationService;
+        this.webSocketEventPublisherService = webSocketEventPublisherService;
     }
 
     public Telemetry create(TelemetryRequest request) {
@@ -63,6 +66,7 @@ public class TelemetryService {
 
         Telemetry savedTelemetry = telemetryRepository.save(telemetry);
         log.info("Telemetry saved successfully id={} machineId={}", savedTelemetry.getId(), request.getMachineId());
+        webSocketEventPublisherService.publishTelemetry(savedTelemetry);
         return savedTelemetry;
     }
 

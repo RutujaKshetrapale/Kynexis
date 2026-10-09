@@ -47,6 +47,9 @@ class MachineServiceTest {
     @Mock
     private DomainValidationService domainValidationService;
 
+    @Mock
+    private WebSocketEventPublisherService webSocketEventPublisherService;
+
     @InjectMocks
     private MachineService machineService;
 
