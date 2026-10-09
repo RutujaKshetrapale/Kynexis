@@ -20,11 +20,9 @@ TRUNCATE TABLE users;
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
--- 1. USERS (Development-Only Passwords Hash)
--- Password for all seed users: Password123!
--- BCrypt Hash: $2a$10$e.xKjQG1f5n8O0Y/fT/xEOeL4eY3l5mOqR0mY9yY4cZ5bQ6aW7vC.
+-- 1. USERS (Development-Only BCrypt Hashes)
 -- ============================================================
-INSERT INTO users (id, username, email, password, role, active) VALUES
+INSERT IGNORE INTO users (id, username, email, password, role, active) VALUES
 (1, 'admin', 'admin@kynexis.industrial.com', '$2a$10$e.xKjQG1f5n8O0Y/fT/xEOeL4eY3l5mOqR0mY9yY4cZ5bQ6aW7vC.', 'ADMIN', TRUE),
 (2, 'engineer_sarah', 'sarah.engineer@kynexis.industrial.com', '$2a$10$e.xKjQG1f5n8O0Y/fT/xEOeL4eY3l5mOqR0mY9yY4cZ5bQ6aW7vC.', 'ENGINEER', TRUE),
 (3, 'operator_john', 'john.operator@kynexis.industrial.com', '$2a$10$e.xKjQG1f5n8O0Y/fT/xEOeL4eY3l5mOqR0mY9yY4cZ5bQ6aW7vC.', 'OPERATOR', TRUE),

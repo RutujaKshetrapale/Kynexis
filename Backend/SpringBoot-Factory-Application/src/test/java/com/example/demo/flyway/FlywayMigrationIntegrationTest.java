@@ -47,4 +47,22 @@ class FlywayMigrationIntegrationTest {
         assertThat(current.getVersion()).isNotNull();
         assertThat(current.getVersion().getVersion()).isEqualTo("1");
     }
+
+    @Test
+    @DisplayName("Verify Full Migration Execution Including V2 Seed Data")
+    void testFullFlywayMigrationThroughV2() {
+        Flyway isolatedFlyway = Flyway.configure()
+                .dataSource("jdbc:h2:mem:v2testdb;DB_CLOSE_DELAY=-1;MODE=MySQL", "sa", "")
+                .locations("classpath:db/migration")
+                .baselineOnMigrate(true)
+                .baselineVersion("0")
+                .load();
+
+        isolatedFlyway.migrate();
+
+        MigrationInfo current = isolatedFlyway.info().current();
+        assertThat(current).isNotNull();
+        assertThat(current.getVersion()).isNotNull();
+        assertThat(current.getVersion().getVersion()).isEqualTo("2");
+    }
 }
