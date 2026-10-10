@@ -7,6 +7,8 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.example.demo.entity.Telemetry;
 
@@ -40,6 +42,10 @@ public interface TelemetryRepository
     findTopByMachineIdOrderByTimestampDesc(
             Long machineId
     );
+
+    @Query("SELECT t FROM Telemetry t WHERE t.id IN (SELECT MAX(t2.id) FROM Telemetry t2 WHERE t2.machine.id IN :machineIds GROUP BY t2.machine.id)")
+    List<Telemetry> findLatestTelemetryByMachineIds(@Param("machineIds") List<Long> machineIds);
+
 
     List<Telemetry> findByTimestampBetween(
             LocalDateTime start,

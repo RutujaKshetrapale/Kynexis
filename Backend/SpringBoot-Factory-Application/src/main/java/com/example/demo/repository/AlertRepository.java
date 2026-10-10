@@ -25,6 +25,9 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
 
     List<Alert> findByMachineIdAndResolvedFalse(Long machineId);
 
+    List<Alert> findByMachineIdInAndResolvedFalse(List<Long> machineIds);
+
+
     // Pagination
     Page<Alert> findAll(Pageable pageable);
 
