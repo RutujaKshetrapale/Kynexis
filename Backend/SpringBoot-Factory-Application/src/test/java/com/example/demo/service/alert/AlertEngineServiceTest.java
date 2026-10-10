@@ -3,8 +3,6 @@ package com.example.demo.service.alert;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -48,11 +46,7 @@ class AlertEngineServiceTest {
         properties = new AlertEngineProperties();
         properties.setEnabled(true);
         properties.setTemperatureHighThreshold(85.0);
-        properties.setTemperatureLowThreshold(0.0);
-        properties.setVibrationHighThreshold(5.0);
-        properties.setPressureHighThreshold(100.0);
-        properties.setPressureLowThreshold(10.0);
-        properties.setRpmHighThreshold(3500.0);
+        properties.setTemperatureHighEnabled(true);
         properties.setMachineStatusEnabled(true);
 
         List<AlertRule> rules = List.of(
@@ -90,6 +84,46 @@ class AlertEngineServiceTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    // ---------------------------------------------------------
+    // Threshold & Rule Enable/Disable Configuration Verification
+    // ---------------------------------------------------------
+    @Test
+    @DisplayName("Verification: Supported rules default to enabled while unverified rules default to disabled")
+    void testDefaultEnabledAndDisabledRuleProperties() {
+        AlertEngineProperties defaultProps = new AlertEngineProperties();
+        assertTrue(defaultProps.isTemperatureHighEnabled(), "Temperature high (85.0°C) must be enabled by default (V2 seed alert #1)");
+        assertTrue(defaultProps.isMachineStatusEnabled(), "Machine status rule must be enabled by default (DomainValidationService)");
+
+        assertFalse(defaultProps.isVibrationHighEnabled(), "Vibration high must default to disabled until approved");
+        assertFalse(defaultProps.isTemperatureLowEnabled(), "Temperature low must default to disabled until approved");
+        assertFalse(defaultProps.isPressureHighEnabled(), "Pressure high must default to disabled until approved");
+        assertFalse(defaultProps.isPressureLowEnabled(), "Pressure low must default to disabled until approved");
+        assertFalse(defaultProps.isRpmHighEnabled(), "RPM high must default to disabled until approved");
+    }
+
+    @Test
+    @DisplayName("Verification: Disabled rule cannot evaluate, create alerts, resolve alerts, or publish notifications")
+    void testDisabledRuleDoesNotEvaluateOrTriggerAlerts() {
+        Telemetry telemetry = new Telemetry();
+        telemetry.setMachine(machine1);
+        telemetry.setTemperature(70.0);
+        telemetry.setVibration(9.0); // High vibration (threshold 5.0), but vibrationHighEnabled is false by default
+
+        List<Alert> alerts = alertEngineService.evaluateTelemetry(telemetry);
+        assertTrue(alerts.isEmpty(), "Disabled vibration rule must not create alerts");
+        verify(alertService, never()).create(any(AlertRequest.class), any());
+
+        // Now enable vibration rule programmatically
+        properties.setVibrationHighEnabled(true);
+        Alert createdAlert = new Alert();
+        createdAlert.setType("HIGH_VIBRATION");
+        when(alertService.create(any(AlertRequest.class), eq(telemetry))).thenReturn(createdAlert);
+
+        List<Alert> enabledAlerts = alertEngineService.evaluateTelemetry(telemetry);
+        assertEquals(1, enabledAlerts.size());
+        assertEquals("HIGH_VIBRATION", enabledAlerts.get(0).getType());
     }
 
     // ---------------------------------------------------------
@@ -138,24 +172,13 @@ class AlertEngineServiceTest {
     @Test
     @DisplayName("Regression 2: Updating machine status does NOT resolve active overheating alert")
     void testMachineStatusUpdateDoesNotResolveTelemetryAlert() {
-        // Machine status changes to RUNNING
         machine1.setStatus("RUNNING");
 
-        // Active overheating alert exists in DB
-        Alert activeOverheatingAlert = new Alert();
-        activeOverheatingAlert.setType("OVERHEATING");
-        activeOverheatingAlert.setSeverity("HIGH");
-        activeOverheatingAlert.setMessage("Spindle/machine temperature of 92.5°C exceeded safety threshold of 85.0°C");
-        activeOverheatingAlert.setMachine(machine1);
-        activeOverheatingAlert.setResolved(false);
-
-        // evaluateMachine should only evaluate MACHINE_STATUS rules!
         List<Alert> alerts = alertEngineService.evaluateMachine(machine1);
 
-        // Verify alertService.update was NEVER called to resolve OVERHEATING alert
         verify(alertService, never()).update(anyLong(), any(AlertRequest.class), any());
         verify(alertService, never()).update(anyLong(), any(AlertRequest.class));
-        assertTrue(alerts.isEmpty(), "Evaluating machine status when status is RUNNING should produce no machine alerts and resolve no telemetry alerts");
+        assertTrue(alerts.isEmpty());
     }
 
     // ---------------------------------------------------------
@@ -193,7 +216,6 @@ class AlertEngineServiceTest {
         assertTrue(alerts.get(0).isResolved());
         assertEquals("ABNORMAL_MACHINE_STATUS", alerts.get(0).getType());
 
-        // Verify only 1 update call occurred (for machine status alert), no telemetry alerts touched
         verify(alertService, times(1)).update(eq(101L), any(AlertRequest.class), eq(null));
     }
 
@@ -226,8 +248,6 @@ class AlertEngineServiceTest {
 
         when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), eq("OVERHEATING")))
                 .thenReturn(Optional.of(activeOverheatingAlert));
-        when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), argThat(s -> !s.equals("OVERHEATING"))))
-                .thenReturn(Optional.empty());
 
         Alert resolvedAlert = new Alert();
         resolvedAlert.setType("OVERHEATING");
@@ -253,7 +273,7 @@ class AlertEngineServiceTest {
     void testRepeatedBreachDoesNotCreateDuplicateActiveAlert() {
         Telemetry telemetry = new Telemetry();
         telemetry.setMachine(machine1);
-        telemetry.setTemperature(92.5); // Same temp reading
+        telemetry.setTemperature(92.5);
         telemetry.setVibration(2.0);
         telemetry.setPressure(50.0);
         telemetry.setRpm(3000.0);
@@ -279,15 +299,11 @@ class AlertEngineServiceTest {
 
         when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), eq("OVERHEATING")))
                 .thenReturn(Optional.of(activeAlert));
-        when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), argThat(s -> !s.equals("OVERHEATING"))))
-                .thenReturn(Optional.empty());
 
         List<Alert> alerts = alertEngineService.evaluateTelemetry(telemetry);
 
         assertEquals(1, alerts.size());
-        // Verify alertService.create was NEVER called (no duplicate active alert)
         verify(alertService, never()).create(any(AlertRequest.class), any());
-        // Verify alertService.update was NOT called because state did not change
         verify(alertService, never()).update(anyLong(), any(AlertRequest.class), any());
     }
 
@@ -299,7 +315,7 @@ class AlertEngineServiceTest {
     void testMeaningfulUpdatePublishesWebSocketEvent() {
         Telemetry higherTempTelemetry = new Telemetry();
         higherTempTelemetry.setMachine(machine1);
-        higherTempTelemetry.setTemperature(98.0); // Temperature spiked to 98.0°C (new message)
+        higherTempTelemetry.setTemperature(98.0);
         higherTempTelemetry.setVibration(2.0);
         higherTempTelemetry.setPressure(50.0);
         higherTempTelemetry.setRpm(3000.0);
@@ -320,8 +336,6 @@ class AlertEngineServiceTest {
 
         when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), eq("OVERHEATING")))
                 .thenReturn(Optional.of(existingActiveAlert));
-        when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), argThat(s -> !s.equals("OVERHEATING"))))
-                .thenReturn(Optional.empty());
 
         Alert updatedAlert = new Alert();
         updatedAlert.setType("OVERHEATING");
@@ -333,7 +347,6 @@ class AlertEngineServiceTest {
         List<Alert> alerts = alertEngineService.evaluateTelemetry(higherTempTelemetry);
 
         assertEquals(1, alerts.size());
-        // Verify alertService.update WAS called (which persists & publishes WebSocket event)
         verify(alertService, times(1)).update(eq(404L), any(AlertRequest.class), eq(higherTempTelemetry));
     }
 
@@ -371,13 +384,10 @@ class AlertEngineServiceTest {
 
         when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), eq("OVERHEATING")))
                 .thenReturn(Optional.of(existingAlert));
-        when(alertRepository.findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(eq(1L), argThat(s -> !s.equals("OVERHEATING"))))
-                .thenReturn(Optional.empty());
 
         List<Alert> alerts = alertEngineService.evaluateTelemetry(sameTelemetry);
 
         assertEquals(1, alerts.size());
-        // Verify alertService.update was NEVER called (no duplicate update/WebSocket notification)
         verify(alertService, never()).update(anyLong(), any(AlertRequest.class), any());
     }
 
@@ -392,7 +402,6 @@ class AlertEngineServiceTest {
         Telemetry noMachine = new Telemetry();
         assertDoesNotThrow(() -> alertEngineService.evaluateTelemetry(noMachine));
 
-        // Ensure alertService.update is never called when telemetry is null
         verify(alertService, never()).update(anyLong(), any(AlertRequest.class), any());
     }
 }

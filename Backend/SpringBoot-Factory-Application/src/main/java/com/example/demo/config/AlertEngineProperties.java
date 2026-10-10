@@ -10,44 +10,45 @@ public class AlertEngineProperties {
     private boolean enabled = true;
 
     // Temperature High Threshold (°C)
-    // Rationale: Seed data V2 specifies 85.0°C spindle safety limit for OVERHEATING
+    // Source: Explicitly defined in V2__seed_initial_data.sql Alert #1 ("Spindle temperature exceeded 85°C safety threshold")
     private boolean temperatureHighEnabled = true;
     private double temperatureHighThreshold = 85.0;
     private String temperatureHighSeverity = "HIGH";
 
     // Temperature Low Threshold (°C)
-    // Rationale: Sub-zero freeze limit (0.0°C) for coolant lines and industrial operations
-    private boolean temperatureLowEnabled = true;
+    // Rationale: Configurable freeze threshold (0.0°C); disabled by default until approved safety limit exists
+    private boolean temperatureLowEnabled = false;
     private double temperatureLowThreshold = 0.0;
     private String temperatureLowSeverity = "MEDIUM";
 
     // Vibration High Threshold (mm/s)
-    // Rationale: Seed data V2 specifies vibration warning limit around 5.0 mm/s
-    private boolean vibrationHighEnabled = true;
+    // Rationale: Configurable vibration limit (5.0 mm/s); disabled by default until approved safety limit exists
+    private boolean vibrationHighEnabled = false;
     private double vibrationHighThreshold = 5.0;
     private String vibrationHighSeverity = "MEDIUM";
 
     // Pressure High Threshold (PSI)
-    // Rationale: Hydraulic stamping press / injection molder maximum safety operating limit (100.0 PSI)
-    private boolean pressureHighEnabled = true;
+    // Rationale: Configurable high pressure limit (100.0 PSI); disabled by default until approved safety limit exists
+    private boolean pressureHighEnabled = false;
     private double pressureHighThreshold = 100.0;
     private String pressureHighSeverity = "HIGH";
 
     // Pressure Low Threshold (PSI)
-    // Rationale: Hydraulic system pressure loss / line leak threshold (10.0 PSI)
-    private boolean pressureLowEnabled = true;
+    // Rationale: Configurable low pressure limit (10.0 PSI); disabled by default until approved safety limit exists
+    private boolean pressureLowEnabled = false;
     private double pressureLowThreshold = 10.0;
     private String pressureLowSeverity = "MEDIUM";
 
     // RPM High Threshold (RPM)
-    // Rationale: Motor overspeed safety limit (3500.0 RPM)
-    private boolean rpmHighEnabled = true;
+    // Rationale: Configurable motor overspeed limit (3500.0 RPM); disabled by default until approved safety limit exists
+    private boolean rpmHighEnabled = false;
     private double rpmHighThreshold = 3500.0;
     private String rpmHighSeverity = "HIGH";
 
     // Machine Status Abnormal Rule
-    // Rationale: Detects physical assets transitioning into abnormal operational states (STOPPED, OFFLINE, MAINTENANCE)
+    // Source: Explicitly supported by DomainValidationService machine status validation (OFFLINE, STOPPED, MAINTENANCE)
     private boolean machineStatusEnabled = true;
+
 
     public boolean isEnabled() {
         return enabled;
