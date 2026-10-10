@@ -17,6 +17,11 @@ public class MachineStatusRule implements AlertRule {
     }
 
     @Override
+    public RuleCategory getCategory() {
+        return RuleCategory.MACHINE_STATUS;
+    }
+
+    @Override
     public boolean isEnabled(AlertEngineProperties properties) {
         return properties.isMachineStatusEnabled();
     }

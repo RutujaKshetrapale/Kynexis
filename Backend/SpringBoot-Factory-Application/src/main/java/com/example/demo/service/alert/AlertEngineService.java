@@ -2,6 +2,7 @@ package com.example.demo.service.alert;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -44,12 +45,12 @@ public class AlertEngineService {
         }
 
         Machine machine = telemetry.getMachine();
-        log.debug("Evaluating alert rules for telemetry id={} machineId={}", telemetry.getId(), machine.getId());
+        log.debug("Evaluating telemetry alert rules for telemetry id={} machineId={}", telemetry.getId(), machine.getId());
 
         List<Alert> processedAlerts = new ArrayList<>();
 
         for (AlertRule rule : rules) {
-            if (!rule.isEnabled(properties)) {
+            if (!rule.isEnabled(properties) || rule.getCategory() != RuleCategory.TELEMETRY) {
                 continue;
             }
 
@@ -61,23 +62,22 @@ public class AlertEngineService {
                 if (result.isBreached()) {
                     if (existingActiveOpt.isPresent()) {
                         Alert activeAlert = existingActiveOpt.get();
-                        boolean needsSave = false;
+                        boolean severityChanged = !Objects.equals(activeAlert.getSeverity(), result.getSeverity());
+                        boolean messageChanged = !Objects.equals(activeAlert.getMessage(), result.getMessage());
 
-                        if (activeAlert.getTelemetry() == null || !activeAlert.getTelemetry().getId().equals(telemetry.getId())) {
-                            activeAlert.setTelemetry(telemetry);
-                            needsSave = true;
-                        }
+                        if (severityChanged || messageChanged) {
+                            AlertRequest updateRequest = new AlertRequest();
+                            updateRequest.setMachineId(machine.getId());
+                            updateRequest.setType(rule.getRuleType());
+                            updateRequest.setSeverity(result.getSeverity());
+                            updateRequest.setMessage(result.getMessage());
+                            updateRequest.setResolved(false);
 
-                        if (!activeAlert.getMessage().equals(result.getMessage())) {
-                            activeAlert.setMessage(result.getMessage());
-                            needsSave = true;
-                        }
-
-                        if (needsSave) {
-                            Alert updated = alertRepository.save(activeAlert);
+                            Alert updated = alertService.update(activeAlert.getId(), updateRequest, telemetry);
                             processedAlerts.add(updated);
-                            log.info("Updated existing active alert id={} machineId={} type={}", updated.getId(), machine.getId(), rule.getRuleType());
+                            log.info("Updated existing telemetry alert with meaningful change id={} machineId={} type={}", updated.getId(), machine.getId(), rule.getRuleType());
                         } else {
+                            // Unchanged alert state: avoid duplicate alertService.update & duplicate WebSocket notification
                             processedAlerts.add(activeAlert);
                         }
                     } else {
@@ -90,9 +90,10 @@ public class AlertEngineService {
 
                         Alert created = alertService.create(request, telemetry);
                         processedAlerts.add(created);
-                        log.info("Created new alert id={} machineId={} type={}", created.getId(), machine.getId(), rule.getRuleType());
+                        log.info("Created new telemetry alert id={} machineId={} type={}", created.getId(), machine.getId(), rule.getRuleType());
                     }
                 } else {
+                    // Condition is normal: resolve existing active telemetry alert if present
                     if (existingActiveOpt.isPresent()) {
                         Alert activeAlert = existingActiveOpt.get();
                         AlertRequest updateRequest = new AlertRequest();
@@ -102,13 +103,13 @@ public class AlertEngineService {
                         updateRequest.setMessage(activeAlert.getMessage() + " (Auto-resolved: condition cleared)");
                         updateRequest.setResolved(true);
 
-                        Alert resolved = alertService.update(activeAlert.getId(), updateRequest);
+                        Alert resolved = alertService.update(activeAlert.getId(), updateRequest, telemetry);
                         processedAlerts.add(resolved);
-                        log.info("Auto-resolved alert id={} machineId={} type={}", resolved.getId(), machine.getId(), rule.getRuleType());
+                        log.info("Auto-resolved telemetry alert id={} machineId={} type={}", resolved.getId(), machine.getId(), rule.getRuleType());
                     }
                 }
             } catch (Exception e) {
-                log.error("Error evaluating rule {} for machineId={}", rule.getRuleType(), machine.getId(), e);
+                log.error("Error evaluating telemetry rule {} for machineId={}", rule.getRuleType(), machine.getId(), e);
             }
         }
 
@@ -121,10 +122,12 @@ public class AlertEngineService {
             return List.of();
         }
 
+        log.debug("Evaluating machine status alert rules for machineId={} status={}", machine.getId(), machine.getStatus());
+
         List<Alert> processedAlerts = new ArrayList<>();
 
         for (AlertRule rule : rules) {
-            if (!rule.isEnabled(properties)) {
+            if (!rule.isEnabled(properties) || rule.getCategory() != RuleCategory.MACHINE_STATUS) {
                 continue;
             }
 
@@ -135,7 +138,26 @@ public class AlertEngineService {
                         .findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(machine.getId(), rule.getRuleType());
 
                 if (result.isBreached()) {
-                    if (existingActiveOpt.isEmpty()) {
+                    if (existingActiveOpt.isPresent()) {
+                        Alert activeAlert = existingActiveOpt.get();
+                        boolean severityChanged = !Objects.equals(activeAlert.getSeverity(), result.getSeverity());
+                        boolean messageChanged = !Objects.equals(activeAlert.getMessage(), result.getMessage());
+
+                        if (severityChanged || messageChanged) {
+                            AlertRequest updateRequest = new AlertRequest();
+                            updateRequest.setMachineId(machine.getId());
+                            updateRequest.setType(rule.getRuleType());
+                            updateRequest.setSeverity(result.getSeverity());
+                            updateRequest.setMessage(result.getMessage());
+                            updateRequest.setResolved(false);
+
+                            Alert updated = alertService.update(activeAlert.getId(), updateRequest, null);
+                            processedAlerts.add(updated);
+                            log.info("Updated machine status alert with meaningful change id={} machineId={}", updated.getId(), machine.getId());
+                        } else {
+                            processedAlerts.add(activeAlert);
+                        }
+                    } else {
                         AlertRequest request = new AlertRequest();
                         request.setMachineId(machine.getId());
                         request.setType(rule.getRuleType());
@@ -156,12 +178,12 @@ public class AlertEngineService {
                     updateRequest.setMessage(activeAlert.getMessage() + " (Auto-resolved: machine status normal)");
                     updateRequest.setResolved(true);
 
-                    Alert resolved = alertService.update(activeAlert.getId(), updateRequest);
+                    Alert resolved = alertService.update(activeAlert.getId(), updateRequest, null);
                     processedAlerts.add(resolved);
                     log.info("Auto-resolved machine status alert id={} machineId={}", resolved.getId(), machine.getId());
                 }
             } catch (Exception e) {
-                log.error("Error evaluating rule {} for machineId={}", rule.getRuleType(), machine.getId(), e);
+                log.error("Error evaluating machine status rule {} for machineId={}", rule.getRuleType(), machine.getId(), e);
             }
         }
 

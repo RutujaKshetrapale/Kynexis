@@ -17,6 +17,11 @@ public class TemperatureHighRule implements AlertRule {
     }
 
     @Override
+    public RuleCategory getCategory() {
+        return RuleCategory.TELEMETRY;
+    }
+
+    @Override
     public boolean isEnabled(AlertEngineProperties properties) {
         return properties.isTemperatureHighEnabled();
     }

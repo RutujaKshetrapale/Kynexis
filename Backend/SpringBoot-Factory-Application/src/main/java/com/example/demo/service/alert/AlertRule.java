@@ -8,6 +8,8 @@ public interface AlertRule {
 
     String getRuleType();
 
+    RuleCategory getCategory();
+
     boolean isEnabled(AlertEngineProperties properties);
 
     EvaluationResult evaluate(Telemetry telemetry, Machine machine, AlertEngineProperties properties);

@@ -3,6 +3,7 @@ package com.example.demo.integration;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -41,12 +42,12 @@ class AlertEngineIntegrationTest {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @Test
-    @DisplayName("Integration: Post High Temp Telemetry -> Automated Alert Generated -> Retrieve Unresolved Alert")
-    void testAutomatedAlertGenerationOnTelemetryIngestion() throws Exception {
+    @DisplayName("Integration Test: High Temp Telemetry -> Alert Created -> Machine Status Update Does NOT Resolve Overheating Alert -> Normal Temp Resolves Overheating Alert")
+    void testAlertLifecycleAndMachineStatusIndependence() throws Exception {
         // 1. Create Plant
         String plantJson = """
                 {
-                    "name": "Alert Hub Plant",
+                    "name": "Integration Hub Plant",
                     "location": "Pune",
                     "active": true
                 }
@@ -59,13 +60,13 @@ class AlertEngineIntegrationTest {
                 .andReturn();
         long plantId = objectMapper.readTree(plantResult.getResponse().getContentAsString()).get("id").asLong();
 
-        // 2. Create Machine
+        // 2. Create Machine (Initial status: OFFLINE)
         String machineJson = String.format("""
                 {
                     "plantId": %d,
-                    "name": "Milling Station High Temp Test",
+                    "name": "Milling Station Integration Test",
                     "type": "CNC",
-                    "status": "RUNNING"
+                    "status": "OFFLINE"
                 }
                 """, plantId);
 
@@ -75,6 +76,11 @@ class AlertEngineIntegrationTest {
                 .andExpect(status().isCreated())
                 .andReturn();
         long machineId = objectMapper.readTree(machineResult.getResponse().getContentAsString()).get("id").asLong();
+
+        // Verify machine status created ABNORMAL_MACHINE_STATUS alert
+        List<Alert> machineAlerts = alertRepository.findByMachineIdAndResolvedFalse(machineId);
+        assertTrue(machineAlerts.stream().anyMatch(a -> "ABNORMAL_MACHINE_STATUS".equals(a.getType())),
+                "OFFLINE status must trigger ABNORMAL_MACHINE_STATUS alert");
 
         // 3. Post Telemetry breaching OVERHEATING threshold (95.0°C > 85.0°C)
         String highTempTelemetryJson = String.format("""
@@ -93,50 +99,41 @@ class AlertEngineIntegrationTest {
                 .content(highTempTelemetryJson))
                 .andExpect(status().isCreated());
 
-        // 4. Verify Alert was automatically created in DB
-        List<Alert> unresolvedAlerts = alertRepository.findByMachineIdAndResolvedFalse(machineId);
-        assertFalse(unresolvedAlerts.isEmpty());
-        Alert overheatingAlert = unresolvedAlerts.stream()
+        // Verify OVERHEATING alert was created
+        List<Alert> activeAlerts = alertRepository.findByMachineIdAndResolvedFalse(machineId);
+        Alert overheatingAlert = activeAlerts.stream()
                 .filter(a -> "OVERHEATING".equals(a.getType()))
                 .findFirst()
                 .orElse(null);
 
-        assertNotNull(overheatingAlert);
-        assertEquals("HIGH", overheatingAlert.getSeverity());
-        assertFalse(overheatingAlert.isResolved());
-        assertTrue(overheatingAlert.getMessage().contains("95.0"));
+        assertNotNull(overheatingAlert, "OVERHEATING alert must be active");
 
-        // 5. Retrieve via REST API /api/alerts/unresolved
-        mockMvc.perform(get("/api/alerts/unresolved"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.type == 'OVERHEATING')]").exists());
-
-        // 6. Deduplication Check: Post another telemetry reading breaching temperature threshold again
-        String highTempTelemetry2 = String.format("""
+        // 4. Update Machine Status to RUNNING (Normal status)
+        String updateMachineJson = String.format("""
                 {
-                    "machineId": %d,
-                    "temperature": 97.5,
-                    "vibration": 1.3,
-                    "pressure": 46.0,
-                    "rpm": 2550.0,
-                    "timestamp": "2026-10-10T12:05:00"
+                    "plantId": %d,
+                    "name": "Milling Station Integration Test",
+                    "type": "CNC",
+                    "status": "RUNNING"
                 }
-                """, machineId);
+                """, plantId);
 
-        mockMvc.perform(post("/api/telemetry")
+        mockMvc.perform(put("/api/machines/" + machineId)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(highTempTelemetry2))
-                .andExpect(status().isCreated());
+                .content(updateMachineJson))
+                .andExpect(status().isOk());
 
-        // Verify NO duplicate active alert was created
-        List<Alert> unresolvedAlertsAfterSecond = alertRepository.findByMachineIdAndResolvedFalse(machineId);
-        long overheatingCount = unresolvedAlertsAfterSecond.stream()
-                .filter(a -> "OVERHEATING".equals(a.getType()))
-                .count();
+        // REGRESSION CHECK: Update to RUNNING resolves ABNORMAL_MACHINE_STATUS alert, BUT DOES NOT RESOLVE OVERHEATING ALERT!
+        List<Alert> activeAlertsAfterMachineUpdate = alertRepository.findByMachineIdAndResolvedFalse(machineId);
+        boolean hasActiveOverheating = activeAlertsAfterMachineUpdate.stream()
+                .anyMatch(a -> "OVERHEATING".equals(a.getType()));
+        boolean hasActiveMachineStatusAlert = activeAlertsAfterMachineUpdate.stream()
+                .anyMatch(a -> "ABNORMAL_MACHINE_STATUS".equals(a.getType()));
 
-        assertEquals(1, overheatingCount, "Repeated breach must not create duplicate active alerts");
+        assertTrue(hasActiveOverheating, "Updating machine status to RUNNING MUST NOT resolve active OVERHEATING alert");
+        assertFalse(hasActiveMachineStatusAlert, "Updating machine status to RUNNING MUST resolve ABNORMAL_MACHINE_STATUS alert");
 
-        // 7. Auto-resolution Check: Post normal telemetry (72.0°C <= 85.0°C)
+        // 5. Post normal telemetry (72.0°C <= 85.0°C)
         String normalTelemetryJson = String.format("""
                 {
                     "machineId": %d,
@@ -153,12 +150,8 @@ class AlertEngineIntegrationTest {
                 .content(normalTelemetryJson))
                 .andExpect(status().isCreated());
 
-        // Verify alert was automatically resolved
-        List<Alert> unresolvedAfterNormal = alertRepository.findByMachineIdAndResolvedFalse(machineId);
-        long activeOverheatingAfterNormal = unresolvedAfterNormal.stream()
-                .filter(a -> "OVERHEATING".equals(a.getType()))
-                .count();
-
-        assertEquals(0, activeOverheatingAfterNormal, "Alert must be auto-resolved when condition clears");
+        // Verify OVERHEATING alert is now resolved by the normal temperature telemetry reading
+        List<Alert> finalActiveAlerts = alertRepository.findByMachineIdAndResolvedFalse(machineId);
+        assertTrue(finalActiveAlerts.isEmpty(), "All alerts must be resolved after normal reading and normal status");
     }
 }

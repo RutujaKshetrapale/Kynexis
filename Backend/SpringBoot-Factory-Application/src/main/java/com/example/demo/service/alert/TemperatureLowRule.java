@@ -17,6 +17,11 @@ public class TemperatureLowRule implements AlertRule {
     }
 
     @Override
+    public RuleCategory getCategory() {
+        return RuleCategory.TELEMETRY;
+    }
+
+    @Override
     public boolean isEnabled(AlertEngineProperties properties) {
         return properties.isTemperatureLowEnabled();
     }

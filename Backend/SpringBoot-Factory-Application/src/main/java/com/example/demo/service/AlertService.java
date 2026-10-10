@@ -191,6 +191,13 @@ public class AlertService {
     public Alert update(
             Long id,
             AlertRequest request) {
+        return update(id, request, null);
+    }
+
+    public Alert update(
+            Long id,
+            AlertRequest request,
+            Telemetry telemetry) {
 
         log.info("Updating alert id={} resolved={}", id, request.isResolved());
 
@@ -213,12 +220,16 @@ public class AlertService {
         alert.setMessage(request.getMessage());
         alert.setSeverity(request.getSeverity());
         alert.setResolved(request.isResolved());
+        if (telemetry != null) {
+            alert.setTelemetry(telemetry);
+        }
 
         Alert updatedAlert = alertRepository.save(alert);
         log.info("Alert updated successfully id={}", id);
         webSocketEventPublisherService.publishAlert(updatedAlert);
         return updatedAlert;
     }
+
 
     // =========================
     // DELETE ALERT
