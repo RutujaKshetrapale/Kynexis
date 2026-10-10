@@ -194,6 +194,39 @@ class TelemetryRepositoryTest {
 
     }
 
+    @Test
+    @DisplayName("Should find latest telemetry by machine IDs selecting maximum timestamp regardless of insertion order")
+    void shouldFindLatestTelemetryByMachineIds_withOutOfOrderTimestamps() {
+        Machine m1 = createMachine();
+        Machine m2 = createMachine();
+
+        // Machine 1 telemetries saved out of timestamp order:
+        // Record 1: 10:00 (saved first)
+        // Record 2: 16:00 (saved second -> latest timestamp!)
+        // Record 3: 12:00 (saved third -> higher ID than 16:00 record, but earlier timestamp!)
+        telemetryRepository.save(createTelemetryWithTemp(m1, LocalDateTime.of(2026, 10, 10, 10, 0), 50.0));
+        Telemetry tLatestM1 = telemetryRepository.save(createTelemetryWithTemp(m1, LocalDateTime.of(2026, 10, 10, 16, 0), 95.0));
+        telemetryRepository.save(createTelemetryWithTemp(m1, LocalDateTime.of(2026, 10, 10, 12, 0), 70.0));
+
+        // Machine 2 telemetries
+        telemetryRepository.save(createTelemetryWithTemp(m2, LocalDateTime.of(2026, 10, 10, 9, 0), 30.0));
+        Telemetry tLatestM2 = telemetryRepository.save(createTelemetryWithTemp(m2, LocalDateTime.of(2026, 10, 10, 15, 0), 80.0));
+
+        List<Telemetry> results = telemetryRepository.findLatestTelemetryByMachineIds(List.of(m1.getId(), m2.getId()));
+
+        assertEquals(2, results.size());
+
+        Telemetry m1Result = results.stream().filter(t -> t.getMachine().getId().equals(m1.getId())).findFirst().orElseThrow();
+        assertEquals(LocalDateTime.of(2026, 10, 10, 16, 0), m1Result.getTimestamp());
+        assertEquals(95.0, m1Result.getTemperature());
+        assertEquals(tLatestM1.getId(), m1Result.getId());
+
+        Telemetry m2Result = results.stream().filter(t -> t.getMachine().getId().equals(m2.getId())).findFirst().orElseThrow();
+        assertEquals(LocalDateTime.of(2026, 10, 10, 15, 0), m2Result.getTimestamp());
+        assertEquals(80.0, m2Result.getTemperature());
+        assertEquals(tLatestM2.getId(), m2Result.getId());
+    }
+
     // =========================
     // PAGINATION
     // =========================
@@ -251,11 +284,18 @@ class TelemetryRepositoryTest {
     private Telemetry createTelemetry(
             Machine machine,
             LocalDateTime timestamp) {
+        return createTelemetryWithTemp(machine, timestamp, 75.5);
+    }
+
+    private Telemetry createTelemetryWithTemp(
+            Machine machine,
+            LocalDateTime timestamp,
+            double temperature) {
 
         Telemetry telemetry =
                 new Telemetry();
 
-        telemetry.setTemperature(75.5);
+        telemetry.setTemperature(temperature);
         telemetry.setVibration(2.5);
         telemetry.setPressure(10.5);
         telemetry.setRpm(1500.0);

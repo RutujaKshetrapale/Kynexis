@@ -43,7 +43,9 @@ public interface TelemetryRepository
             Long machineId
     );
 
-    @Query("SELECT t FROM Telemetry t WHERE t.id IN (SELECT MAX(t2.id) FROM Telemetry t2 WHERE t2.machine.id IN :machineIds GROUP BY t2.machine.id)")
+    @Query("SELECT t FROM Telemetry t WHERE t.machine.id IN :machineIds AND t.id = (" +
+           "SELECT MAX(t2.id) FROM Telemetry t2 WHERE t2.machine.id = t.machine.id AND t2.timestamp = (" +
+           "SELECT MAX(t3.timestamp) FROM Telemetry t3 WHERE t3.machine.id = t.machine.id))")
     List<Telemetry> findLatestTelemetryByMachineIds(@Param("machineIds") List<Long> machineIds);
 
 
