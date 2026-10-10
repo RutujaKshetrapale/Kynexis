@@ -34,6 +34,7 @@ import com.example.demo.entity.Telemetry;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.TelemetryRepository;
+import com.example.demo.service.alert.AlertEngineService;
 
 @ExtendWith(MockitoExtension.class)
 class TelemetryServiceTest {
@@ -50,8 +51,12 @@ class TelemetryServiceTest {
     @Mock
     private WebSocketEventPublisherService webSocketEventPublisherService;
 
+    @Mock
+    private AlertEngineService alertEngineService;
+
     @InjectMocks
     private TelemetryService telemetryService;
+
 
     private Telemetry telemetry;
     private Machine machine;

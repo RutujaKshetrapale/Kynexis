@@ -13,6 +13,7 @@ import com.example.demo.entity.Telemetry;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.TelemetryRepository;
+import com.example.demo.service.alert.AlertEngineService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,17 +25,20 @@ public class TelemetryService {
     private final MachineRepository machineRepository;
     private final DomainValidationService domainValidationService;
     private final WebSocketEventPublisherService webSocketEventPublisherService;
+    private final AlertEngineService alertEngineService;
 
     public TelemetryService(
             TelemetryRepository telemetryRepository,
             MachineRepository machineRepository,
             DomainValidationService domainValidationService,
-            WebSocketEventPublisherService webSocketEventPublisherService) {
+            WebSocketEventPublisherService webSocketEventPublisherService,
+            AlertEngineService alertEngineService) {
 
         this.telemetryRepository = telemetryRepository;
         this.machineRepository = machineRepository;
         this.domainValidationService = domainValidationService;
         this.webSocketEventPublisherService = webSocketEventPublisherService;
+        this.alertEngineService = alertEngineService;
     }
 
     public Telemetry create(TelemetryRequest request) {
@@ -67,8 +71,18 @@ public class TelemetryService {
         Telemetry savedTelemetry = telemetryRepository.save(telemetry);
         log.info("Telemetry saved successfully id={} machineId={}", savedTelemetry.getId(), request.getMachineId());
         webSocketEventPublisherService.publishTelemetry(savedTelemetry);
+
+        if (alertEngineService != null) {
+            try {
+                alertEngineService.evaluateTelemetry(savedTelemetry);
+            } catch (Exception e) {
+                log.error("Error evaluating alert rules for telemetry id={}", savedTelemetry.getId(), e);
+            }
+        }
+
         return savedTelemetry;
     }
+
 
     public List<Telemetry> getAll() {
         return telemetryRepository.findAll();

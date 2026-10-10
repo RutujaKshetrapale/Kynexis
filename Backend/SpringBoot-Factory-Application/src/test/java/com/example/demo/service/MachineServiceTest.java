@@ -34,6 +34,7 @@ import com.example.demo.exception.BusinessValidationException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.PlantRepository;
+import com.example.demo.service.alert.AlertEngineService;
 
 @ExtendWith(MockitoExtension.class)
 class MachineServiceTest {
@@ -50,8 +51,12 @@ class MachineServiceTest {
     @Mock
     private WebSocketEventPublisherService webSocketEventPublisherService;
 
+    @Mock
+    private AlertEngineService alertEngineService;
+
     @InjectMocks
     private MachineService machineService;
+
 
     private Machine machine;
     private Plant plant;

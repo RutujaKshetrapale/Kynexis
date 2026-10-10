@@ -1,6 +1,7 @@
 package com.example.demo.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,13 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
     List<Alert> findByResolvedFalse();
 
     List<Alert> findBySeverity(String severity);
+
+    // Alert engine active alert queries for deduplication and lifecycle management
+    Optional<Alert> findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(Long machineId, String type);
+
+    List<Alert> findByMachineIdAndTypeAndResolvedFalse(Long machineId, String type);
+
+    List<Alert> findByMachineIdAndResolvedFalse(Long machineId);
 
     // Pagination
     Page<Alert> findAll(Pageable pageable);
@@ -33,4 +41,4 @@ public interface AlertRepository extends JpaRepository<Alert, Long> {
             String severity,
             Pageable pageable
     );
-}
+}

@@ -13,6 +13,7 @@ import com.example.demo.exception.BusinessValidationException;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.PlantRepository;
+import com.example.demo.service.alert.AlertEngineService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -24,17 +25,20 @@ public class MachineService {
     private final PlantRepository plantRepository;
     private final DomainValidationService domainValidationService;
     private final WebSocketEventPublisherService webSocketEventPublisherService;
+    private final AlertEngineService alertEngineService;
 
     public MachineService(
             MachineRepository machineRepository,
             PlantRepository plantRepository,
             DomainValidationService domainValidationService,
-            WebSocketEventPublisherService webSocketEventPublisherService) {
+            WebSocketEventPublisherService webSocketEventPublisherService,
+            AlertEngineService alertEngineService) {
 
         this.machineRepository = machineRepository;
         this.plantRepository = plantRepository;
         this.domainValidationService = domainValidationService;
         this.webSocketEventPublisherService = webSocketEventPublisherService;
+        this.alertEngineService = alertEngineService;
     }
 
     public Machine create(MachineRequest request) {
@@ -64,8 +68,18 @@ public class MachineService {
         Machine savedMachine = machineRepository.save(machine);
         log.info("Machine created successfully id={} name={}", savedMachine.getId(), savedMachine.getName());
         webSocketEventPublisherService.publishMachineStatus(savedMachine);
+
+        if (alertEngineService != null) {
+            try {
+                alertEngineService.evaluateMachine(savedMachine);
+            } catch (Exception e) {
+                log.error("Error evaluating alert rules for machine id={}", savedMachine.getId(), e);
+            }
+        }
+
         return savedMachine;
     }
+
 
     public List<Machine> getAll() {
         return machineRepository.findAll();
@@ -221,8 +235,18 @@ public class MachineService {
         Machine updatedMachine = machineRepository.save(machine);
         log.info("Machine updated successfully id={}", id);
         webSocketEventPublisherService.publishMachineStatus(updatedMachine);
+
+        if (alertEngineService != null) {
+            try {
+                alertEngineService.evaluateMachine(updatedMachine);
+            } catch (Exception e) {
+                log.error("Error evaluating alert rules for machine id={}", updatedMachine.getId(), e);
+            }
+        }
+
         return updatedMachine;
     }
+
 
     public void delete(Long id) {
 

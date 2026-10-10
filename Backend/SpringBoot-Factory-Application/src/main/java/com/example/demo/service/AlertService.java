@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import com.example.demo.dto.AlertRequest;
 import com.example.demo.entity.Alert;
 import com.example.demo.entity.Machine;
+import com.example.demo.entity.Telemetry;
 import com.example.demo.exception.ResourceNotFoundException;
 import com.example.demo.repository.AlertRepository;
 import com.example.demo.repository.MachineRepository;
@@ -39,6 +40,10 @@ public class AlertService {
     // =========================
 
     public Alert create(AlertRequest request) {
+        return create(request, null);
+    }
+
+    public Alert create(AlertRequest request, Telemetry telemetry) {
 
         log.info("Creating alert machineId={} severity={} type={}", request.getMachineId(), request.getSeverity(), request.getType());
 
@@ -57,12 +62,14 @@ public class AlertService {
         alert.setSeverity(request.getSeverity());
         alert.setResolved(request.isResolved());
         alert.setCreatedAt(LocalDateTime.now());
+        alert.setTelemetry(telemetry);
 
         Alert savedAlert = alertRepository.save(alert);
         log.info("Alert created successfully id={} machineId={}", savedAlert.getId(), request.getMachineId());
         webSocketEventPublisherService.publishAlert(savedAlert);
         return savedAlert;
     }
+
 
     // =========================
     // GET ALL ALERTS
