@@ -43,10 +43,20 @@ public interface TelemetryRepository
             Long machineId
     );
 
+    Optional<Telemetry> findFirstByMachineIdOrderByTimestampDescIdDesc(Long machineId);
+
     @Query("SELECT t FROM Telemetry t WHERE t.machine.id IN :machineIds AND t.id = (" +
            "SELECT MAX(t2.id) FROM Telemetry t2 WHERE t2.machine.id = t.machine.id AND t2.timestamp = (" +
            "SELECT MAX(t3.timestamp) FROM Telemetry t3 WHERE t3.machine.id = t.machine.id))")
     List<Telemetry> findLatestTelemetryByMachineIds(@Param("machineIds") List<Long> machineIds);
+
+    @Query("SELECT t FROM Telemetry t WHERE t.machine.id IN :machineIds " +
+           "AND (:since IS NULL OR t.timestamp >= :since) " +
+           "ORDER BY t.timestamp DESC, t.id DESC")
+    List<Telemetry> findRecentTelemetriesByMachineIds(
+            @Param("machineIds") List<Long> machineIds,
+            @Param("since") LocalDateTime since
+    );
 
 
     List<Telemetry> findByTimestampBetween(

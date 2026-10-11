@@ -227,6 +227,46 @@ class TelemetryRepositoryTest {
         assertEquals(tLatestM2.getId(), m2Result.getId());
     }
 
+    @Test
+    @DisplayName("Should find latest telemetry by single machine ID with deterministic timestamp and id tie-breaker")
+    void shouldFindFirstByMachineIdOrderByTimestampDescIdDesc() {
+        Machine m = createMachine();
+
+        telemetryRepository.save(createTelemetryWithTemp(m, LocalDateTime.of(2026, 10, 10, 10, 0), 50.0));
+        Telemetry tLatest = telemetryRepository.save(createTelemetryWithTemp(m, LocalDateTime.of(2026, 10, 10, 16, 0), 99.0));
+        telemetryRepository.save(createTelemetryWithTemp(m, LocalDateTime.of(2026, 10, 10, 12, 0), 70.0));
+
+        Telemetry result = telemetryRepository.findFirstByMachineIdOrderByTimestampDescIdDesc(m.getId()).orElseThrow();
+        assertEquals(LocalDateTime.of(2026, 10, 10, 16, 0), result.getTimestamp());
+        assertEquals(99.0, result.getTemperature());
+        assertEquals(tLatest.getId(), result.getId());
+    }
+
+    @Test
+    @DisplayName("Should find recent telemetries across multiple machine IDs with optional since date bound")
+    void shouldFindRecentTelemetriesByMachineIds() {
+        Machine m1 = createMachine();
+        Machine m2 = createMachine();
+
+        LocalDateTime t1 = LocalDateTime.of(2026, 10, 10, 12, 0);
+        LocalDateTime t2 = LocalDateTime.of(2026, 10, 10, 14, 0);
+        LocalDateTime tOld = LocalDateTime.of(2026, 10, 1, 10, 0);
+
+        telemetryRepository.save(createTelemetryWithTemp(m1, tOld, 40.0));
+        telemetryRepository.save(createTelemetryWithTemp(m1, t1, 60.0));
+        telemetryRepository.save(createTelemetryWithTemp(m1, t2, 70.0));
+
+        telemetryRepository.save(createTelemetryWithTemp(m2, tOld, 45.0));
+        telemetryRepository.save(createTelemetryWithTemp(m2, t2, 80.0));
+
+        LocalDateTime cutoff = LocalDateTime.of(2026, 10, 5, 0, 0);
+        List<Telemetry> results = telemetryRepository.findRecentTelemetriesByMachineIds(List.of(m1.getId(), m2.getId()), cutoff);
+
+        // Expect only readings on or after cutoff (3 readings total)
+        assertEquals(3, results.size());
+        assertTrue(results.stream().allMatch(t -> !t.getTimestamp().isBefore(cutoff)));
+    }
+
     // =========================
     // PAGINATION
     // =========================

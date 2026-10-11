@@ -14,6 +14,8 @@ public interface MaintenanceRepository
     // Existing queries
     List<Maintenance> findByMachineId(Long machineId);
 
+    List<Maintenance> findByMachineIdIn(List<Long> machineIds);
+
     List<Maintenance> findByStatus(String status);
 
     List<Maintenance> findByStatusOrderByScheduledDateAsc(
