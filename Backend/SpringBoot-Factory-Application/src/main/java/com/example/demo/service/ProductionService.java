@@ -2,9 +2,12 @@ package com.example.demo.service;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.ProductionRequest;
 import com.example.demo.entity.Machine;
@@ -31,6 +34,7 @@ public class ProductionService {
     // CREATE PRODUCTION
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Production create(
             ProductionRequest request) {
 
@@ -180,6 +184,7 @@ public class ProductionService {
     // UPDATE
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Production update(
             Long id,
             ProductionRequest request) {
@@ -234,6 +239,7 @@ public class ProductionService {
     // DELETE
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public void delete(Long id) {
 
         Production production =

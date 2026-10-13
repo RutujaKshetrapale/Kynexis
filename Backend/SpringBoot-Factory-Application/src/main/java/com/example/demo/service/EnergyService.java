@@ -3,9 +3,12 @@ package com.example.demo.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.EnergyRequest;
 import com.example.demo.entity.Energy;
@@ -32,6 +35,7 @@ public class EnergyService {
     // CREATE ENERGY RECORD
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Energy create(
             EnergyRequest request) {
 
@@ -139,6 +143,7 @@ public class EnergyService {
     // UPDATE
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Energy update(
             Long id,
             EnergyRequest request) {
@@ -173,6 +178,7 @@ public class EnergyService {
     // DELETE
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public void delete(Long id) {
 
         Energy energy =

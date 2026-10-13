@@ -2,9 +2,12 @@ package com.example.demo.service;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.PlantRequest;
 import com.example.demo.entity.Plant;
@@ -24,6 +27,7 @@ public class PlantService {
         this.plantRepository = plantRepository;
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Plant create(PlantRequest request) {
 
         log.info("Creating plant name={} location={}", request.getName(), request.getLocation());
@@ -114,6 +118,7 @@ public class PlantService {
                 );
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Plant update(
             Long id,
             PlantRequest request) {
@@ -141,6 +146,7 @@ public class PlantService {
         return updatedPlant;
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public void delete(Long id) {
 
         log.info("Deleting plant id={}", id);

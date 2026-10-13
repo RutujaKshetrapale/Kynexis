@@ -1,7 +1,9 @@
 package com.example.demo.service;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.config.CacheConfig;
 import com.example.demo.dto.DashboardMachineStatusResponse;
 import com.example.demo.dto.DashboardSummaryResponse;
 import com.example.demo.repository.AlertRepository;
@@ -38,6 +40,7 @@ public class DashboardService {
         this.energyRepository = energyRepository;
     }
 
+    @Cacheable(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, key = "'summary'")
     public DashboardSummaryResponse getSummary() {
 
         long totalPlants = plantRepository.count();
@@ -90,6 +93,7 @@ public class DashboardService {
         );
     }
 
+    @Cacheable(value = CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS, key = "'machine-status'")
     public DashboardMachineStatusResponse getMachineStatus() {
 
         long active =

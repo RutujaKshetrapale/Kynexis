@@ -2,9 +2,13 @@ package com.example.demo.service;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.MachineRequest;
 import com.example.demo.entity.Machine;
@@ -41,6 +45,10 @@ public class MachineService {
         this.alertEngineService = alertEngineService;
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS, allEntries = true)
+    })
     public Machine create(MachineRequest request) {
 
         log.info("Creating machine name={} plantId={}", request.getName(), request.getPlantId());
@@ -206,6 +214,10 @@ public class MachineService {
                 );
     }
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS, allEntries = true)
+    })
     public Machine update(
             Long id,
             MachineRequest request) {
@@ -248,6 +260,10 @@ public class MachineService {
     }
 
 
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS, allEntries = true)
+    })
     public void delete(Long id) {
 
         log.info("Deleting machine id={}", id);

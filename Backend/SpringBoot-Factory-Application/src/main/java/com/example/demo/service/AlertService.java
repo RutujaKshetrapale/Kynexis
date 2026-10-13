@@ -3,9 +3,12 @@ package com.example.demo.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.AlertRequest;
 import com.example.demo.entity.Alert;
@@ -39,10 +42,12 @@ public class AlertService {
     // CREATE ALERT
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Alert create(AlertRequest request) {
         return create(request, null);
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Alert create(AlertRequest request, Telemetry telemetry) {
 
         log.info("Creating alert machineId={} severity={} type={}", request.getMachineId(), request.getSeverity(), request.getType());
@@ -188,12 +193,14 @@ public class AlertService {
     // UPDATE ALERT
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Alert update(
             Long id,
             AlertRequest request) {
         return update(id, request, null);
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Alert update(
             Long id,
             AlertRequest request,
@@ -235,6 +242,7 @@ public class AlertService {
     // DELETE ALERT
     // =========================
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public void delete(Long id) {
 
         log.info("Deleting alert id={}", id);

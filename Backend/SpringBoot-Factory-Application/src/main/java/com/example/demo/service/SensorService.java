@@ -2,9 +2,12 @@ package com.example.demo.service;
 
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.SensorRequest;
 import com.example.demo.entity.Machine;
@@ -27,6 +30,7 @@ public class SensorService {
         this.machineRepository = machineRepository;
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Sensor create(SensorRequest request) {
 
         Machine machine = machineRepository
@@ -180,6 +184,7 @@ public class SensorService {
                 );
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public Sensor update(
             Long id,
             SensorRequest request) {
@@ -206,6 +211,7 @@ public class SensorService {
         return sensorRepository.save(sensor);
     }
 
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, allEntries = true)
     public void delete(Long id) {
 
         Sensor sensor = getById(id);
