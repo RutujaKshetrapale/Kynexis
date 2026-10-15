@@ -1,9 +1,11 @@
 package com.example.demo.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +28,8 @@ import org.slf4j.MDC;
 import org.springframework.kafka.KafkaException;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.demo.config.KynexisKafkaProperties;
 import com.example.demo.dto.event.MachineAlertCreated;
@@ -67,6 +71,12 @@ class KafkaEventPublisherServiceTest {
     @AfterEach
     void tearDown() {
         MDC.clear();
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test
@@ -301,5 +311,134 @@ class KafkaEventPublisherServiceTest {
         publisherService.publishAlertResolved(null);
 
         verify(kafkaTemplate, never()).send(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("Should publish only after commit when transaction is active and complete future")
+    void shouldPublishOnlyAfterCommitWhenTransactionActive() throws Exception {
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            Machine machine = new Machine();
+            setId(machine, 49L);
+
+            Telemetry telemetry = new Telemetry();
+            setId(telemetry, 1005L);
+            telemetry.setMachine(machine);
+
+            RecordMetadata metadata = new RecordMetadata(new TopicPartition("kynexis.machine-telemetry", 0), 0, 0, 0, 0, 0);
+            SendResult<String, Object> sendResult = new SendResult<>(null, metadata);
+            when(kafkaTemplate.send(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(sendResult));
+
+            CompletableFuture<SendResult<String, Object>> future = publisherService.publishTelemetryRecorded(telemetry);
+
+            // Kafka send must not be called while transaction is active before commit
+            verify(kafkaTemplate, never()).send(any(), any(), any());
+            assertThat(future.isDone()).isFalse();
+
+            // Simulate Spring commit lifecycle
+            for (TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
+                sync.afterCommit();
+            }
+
+            // Kafka send must now have occurred
+            verify(kafkaTemplate, times(1)).send(any(), any(), any());
+            assertThat(future.isDone()).isTrue();
+            assertThat(future.get()).isEqualTo(sendResult);
+
+            // Simulate subsequent afterCompletion(STATUS_COMMITTED)
+            for (TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
+                sync.afterCompletion(TransactionSynchronization.STATUS_COMMITTED);
+            }
+
+            // Verify no second send and future still has the same result
+            verify(kafkaTemplate, times(1)).send(any(), any(), any());
+            assertThat(future.get()).isEqualTo(sendResult);
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    @DisplayName("Should complete future exceptionally and not publish when transaction rolls back")
+    void shouldCompleteExceptionallyOnTransactionRollbackWithoutPublishing() {
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            Machine machine = new Machine();
+            setId(machine, 50L);
+
+            Telemetry telemetry = new Telemetry();
+            setId(telemetry, 1006L);
+            telemetry.setMachine(machine);
+
+            CompletableFuture<SendResult<String, Object>> future = publisherService.publishTelemetryRecorded(telemetry);
+
+            assertThat(future.isDone()).isFalse();
+            verify(kafkaTemplate, never()).send(any(), any(), any());
+
+            // Simulate Spring rollback lifecycle (afterCommit is NOT called)
+            for (TransactionSynchronization sync : TransactionSynchronizationManager.getSynchronizations()) {
+                sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+            }
+
+            // Verify Kafka send was never called
+            verify(kafkaTemplate, never()).send(any(), any(), any());
+
+            // Verify future completes exceptionally without hanging indefinitely
+            assertThat(future.isDone()).isTrue();
+            assertThat(future.isCompletedExceptionally()).isTrue();
+            assertThatThrownBy(future::get)
+                    .isInstanceOf(ExecutionException.class)
+                    .hasCauseInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("Transaction rolled back or uncommitted");
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
+    }
+
+    @Test
+    @DisplayName("Transaction synchronization callbacks cannot complete the future or send more than once")
+    void shouldNotCompleteFutureMoreThanOnceWhenCallbacksInvokedRepeatedly() {
+        TransactionSynchronizationManager.initSynchronization();
+        TransactionSynchronizationManager.setActualTransactionActive(true);
+        try {
+            Machine machine = new Machine();
+            setId(machine, 51L);
+
+            Telemetry telemetry = new Telemetry();
+            setId(telemetry, 1007L);
+            telemetry.setMachine(machine);
+
+            RecordMetadata metadata = new RecordMetadata(new TopicPartition("kynexis.machine-telemetry", 0), 0, 0, 0, 0, 0);
+            SendResult<String, Object> sendResult = new SendResult<>(null, metadata);
+            when(kafkaTemplate.send(any(), any(), any())).thenReturn(CompletableFuture.completedFuture(sendResult));
+
+            CompletableFuture<SendResult<String, Object>> future = publisherService.publishTelemetryRecorded(telemetry);
+
+            TransactionSynchronization sync = TransactionSynchronizationManager.getSynchronizations().get(0);
+
+            // First commit invocation
+            sync.afterCommit();
+            verify(kafkaTemplate, times(1)).send(any(), any(), any());
+
+            // Duplicate commit invocation must be ignored
+            sync.afterCommit();
+            verify(kafkaTemplate, times(1)).send(any(), any(), any());
+
+            // Normal completion callback
+            sync.afterCompletion(TransactionSynchronization.STATUS_COMMITTED);
+            verify(kafkaTemplate, times(1)).send(any(), any(), any());
+
+            // Subsequent rogue rollback completion invocation must not modify already-committed future
+            sync.afterCompletion(TransactionSynchronization.STATUS_ROLLED_BACK);
+            assertThat(future.isCompletedExceptionally()).isFalse();
+            assertThat(future.isDone()).isTrue();
+        } finally {
+            TransactionSynchronizationManager.setActualTransactionActive(false);
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 }

@@ -91,15 +91,32 @@ KYNEXIS is a connected industrial intelligence platform operating in a smart man
 
 All event contracts reside in `com.example.demo.dto.event` and implement the `KynexisEvent` interface. They use Jackson JSON serialization with `JavaTimeModule` support (ISO-8601 formatting). No JPA entities, database relationships, passwords, secrets, or JWTs are serialized.
 
+> [!NOTE]
+> **Timestamp Types**: All event timestamp fields (`timestamp`, `telemetryTimestamp`, and `alertCreatedAt`) are implemented as `java.time.LocalDateTime` formatted as ISO-8601 local date-time strings (`yyyy-MM-dd'T'HH:mm:ss`) using `@JsonFormat`. They represent local plant time aligned with the underlying JPA entities (`Telemetry.timestamp` and `Alert.createdAt`), rather than UTC `Instant` or epoch milliseconds. Downstream consumers should parse these fields as ISO-8601 local date-time strings.
+
 ### Common Contract (`KynexisEvent`):
-- `eventId`: UUID (String) — Globally unique identifier for event deduplication.
-- `eventType`: String — Discriminator name.
-- `schemaVersion`: String — Semantic schema version (current: `"1.0"`).
-- `timestamp`: LocalDateTime (ISO-8601 string) — Timestamp when event was generated.
-- `machineId`: Long — Unique ID of the affected machine asset.
-- `correlationId`: String — Request/correlation ID extracted from SLF4J MDC (`X-Request-ID`).
+- `eventId`: `String` (UUID) — Globally unique identifier for event deduplication.
+- `eventType`: `String` — Event type discriminator name.
+- `schemaVersion`: `String` — Semantic schema version (current: `"1.0"`).
+- `timestamp`: `LocalDateTime` (ISO-8601 string, pattern `"yyyy-MM-dd'T'HH:mm:ss"`) — Timestamp when the event was generated.
+- `machineId`: `Long` — Unique ID of the affected machine asset (used as Kafka partition key).
+- `correlationId`: `String` — Distributed correlation / request ID extracted from SLF4J MDC (`X-Request-ID`).
 
 ### 1. `MachineTelemetryRecorded`
+Published when new machine sensor telemetry is ingested and persisted.
+- `eventId`: `String` (UUID)
+- `eventType`: `String` (`"MachineTelemetryRecorded"`)
+- `schemaVersion`: `String` (`"1.0"`)
+- `timestamp`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Event creation timestamp
+- `machineId`: `Long` — Machine asset identifier
+- `telemetryId`: `Long` — Persisted telemetry record identifier
+- `temperature`: `Double` — Temperature reading (°C)
+- `vibration`: `Double` — Vibration reading (mm/s)
+- `pressure`: `Double` — Pressure reading (bar)
+- `rpm`: `Double` — Rotational speed reading (RPM)
+- `telemetryTimestamp`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Ingestion/sensor timestamp
+- `correlationId`: `String` — Request tracing ID (nullable)
+
 ```json
 {
   "eventId": "3de53984-76c8-4ac2-b866-97c38d032ddf",
@@ -118,6 +135,21 @@ All event contracts reside in `com.example.demo.dto.event` and implement the `Ky
 ```
 
 ### 2. `MachineAlertCreated`
+Published when an alert rule triggers a new alert condition.
+- `eventId`: `String` (UUID)
+- `eventType`: `String` (`"MachineAlertCreated"`)
+- `schemaVersion`: `String` (`"1.0"`)
+- `timestamp`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Event creation timestamp
+- `machineId`: `Long` — Machine asset identifier
+- `alertId`: `Long` — Alert record identifier
+- `alertType`: `String` — Rule/alert category (e.g., `"TEMPERATURE_HIGH"`)
+- `severity`: `String` — Alert severity (`"LOW"`, `"MEDIUM"`, `"HIGH"`, `"CRITICAL"`)
+- `message`: `String` — Human-readable alert summary
+- `resolved`: `boolean` — Current alert status (`false`)
+- `alertCreatedAt`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Timestamp when alert entity was created
+- `telemetryId`: `Long` — Associated telemetry identifier (nullable)
+- `correlationId`: `String` — Request tracing ID (nullable)
+
 ```json
 {
   "eventId": "5309e80c-bdb4-43b3-b245-5c14c6569070",
@@ -137,6 +169,21 @@ All event contracts reside in `com.example.demo.dto.event` and implement the `Ky
 ```
 
 ### 3. `MachineAlertUpdated`
+Published on meaningful alert state or severity updates.
+- `eventId`: `String` (UUID)
+- `eventType`: `String` (`"MachineAlertUpdated"`)
+- `schemaVersion`: `String` (`"1.0"`)
+- `timestamp`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Event creation timestamp
+- `machineId`: `Long` — Machine asset identifier
+- `alertId`: `Long` — Alert record identifier
+- `alertType`: `String` — Rule/alert category
+- `severity`: `String` — Updated severity
+- `message`: `String` — Updated message summary
+- `resolved`: `boolean` — Current alert status (`false`)
+- `alertCreatedAt`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Timestamp when alert entity was created
+- `telemetryId`: `Long` — Associated telemetry identifier (nullable)
+- `correlationId`: `String` — Request tracing ID (nullable)
+
 ```json
 {
   "eventId": "b87e60cf-5c1c-46ff-98a4-9d55f19e9a6e",
@@ -156,6 +203,21 @@ All event contracts reside in `com.example.demo.dto.event` and implement the `Ky
 ```
 
 ### 4. `MachineAlertResolved`
+Published when an open alert is marked as resolved.
+- `eventId`: `String` (UUID)
+- `eventType`: `String` (`"MachineAlertResolved"`)
+- `schemaVersion`: `String` (`"1.0"`)
+- `timestamp`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Event creation timestamp
+- `machineId`: `Long` — Machine asset identifier
+- `alertId`: `Long` — Alert record identifier
+- `alertType`: `String` — Rule/alert category
+- `severity`: `String` — Alert severity
+- `message`: `String` — Resolution message summary
+- `resolved`: `boolean` — Current alert status (`true`)
+- `alertCreatedAt`: `LocalDateTime` (`"yyyy-MM-dd'T'HH:mm:ss"`) — Timestamp when alert entity was created
+- `telemetryId`: `Long` — Associated telemetry identifier (nullable)
+- `correlationId`: `String` — Request tracing ID (nullable)
+
 ```json
 {
   "eventId": "8e0f6ee5-1a20-41ab-a44b-bd2ac2af96ef",
@@ -263,6 +325,12 @@ kafka-console-consumer \
 - **`enable.idempotence=true`**: Eliminates duplicate messages caused by producer retries across network blips.
 - **Asynchronous Non-blocking**: `kafkaTemplate.send()` returns a `CompletableFuture` that does not block critical HTTP API execution.
 - **Visible Failure Logging**: Callback logs any broker failures explicitly at `ERROR` level with the topic, partition key, and exception stack trace.
+
+### Transaction Synchronization & Rollback Safety (Phase 20.1 Hardening):
+- **Commit Phase (`afterCommit`)**: When an active database transaction commits successfully, Spring triggers `afterCommit()`. The publisher initiates the asynchronous Kafka send via `kafkaTemplate.send(...)` and completes the returned `CompletableFuture` upon broker acknowledgement.
+- **Rollback Phase (`afterCompletion`)**: If the transaction rolls back or fails to commit (`status != STATUS_COMMITTED`), `afterCommit()` is skipped. Instead, `afterCompletion(status)` intercepts the rollback, cancels event publication, logs a warning, and completes the returned `CompletableFuture` exceptionally with an `IllegalStateException`.
+- **Indefinite Hanging Prevention**: Callers awaiting or chaining onto the returned `CompletableFuture` are never left hanging indefinitely on rollback.
+- **Single-Completion Invariant**: Synchronization callbacks are guarded by an `AtomicBoolean` compare-and-set latch, guaranteeing that transaction callbacks cannot execute duplicate Kafka sends or complete the future more than once.
 
 ### Known Delivery Limitation (Honest Architectural Disclosure):
 > **Important Reliability Limitation**:

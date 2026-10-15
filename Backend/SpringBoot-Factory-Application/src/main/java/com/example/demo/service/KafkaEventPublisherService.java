@@ -3,6 +3,7 @@ package com.example.demo.service;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.MDC;
@@ -205,13 +206,29 @@ public class KafkaEventPublisherService {
         CompletableFuture<SendResult<String, Object>> resultFuture = new CompletableFuture<>();
 
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
-            log.debug("Active transaction detected. Registering afterCommit synchronization for eventType={} eventId={}",
+            log.debug("Active transaction detected. Registering transaction synchronization for eventType={} eventId={}",
                     event.getEventType(), event.getEventId());
 
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                private final AtomicBoolean executed = new AtomicBoolean(false);
+
                 @Override
                 public void afterCommit() {
-                    sendToKafkaAsync(topic, key, event, resultFuture);
+                    if (executed.compareAndSet(false, true)) {
+                        sendToKafkaAsync(topic, key, event, resultFuture);
+                    }
+                }
+
+                @Override
+                public void afterCompletion(int status) {
+                    if (status != TransactionSynchronization.STATUS_COMMITTED) {
+                        if (executed.compareAndSet(false, true)) {
+                            log.warn("Transaction rolled back or uncommitted (status={}). Kafka event publication skipped for eventType={} eventId={}",
+                                    status, event.getEventType(), event.getEventId());
+                            resultFuture.completeExceptionally(new IllegalStateException(
+                                    "Transaction rolled back or uncommitted (status=" + status + "); Kafka event publication cancelled for eventId=" + event.getEventId()));
+                        }
+                    }
                 }
             });
         } else {
@@ -235,6 +252,12 @@ public class KafkaEventPublisherService {
                     topic, key, event.getEventType(), event.getEventId());
 
             CompletableFuture<SendResult<String, Object>> sendFuture = kafkaTemplate.send(topic, key, event);
+            if (sendFuture == null) {
+                log.warn("KafkaTemplate.send returned null future for topic={} key={} eventId={}", topic, key, event.getEventId());
+                resultFuture.complete(null);
+                return;
+            }
+
             sendFuture.whenComplete((result, ex) -> {
                 if (ex != null) {
                     log.error("Failed to publish event to Kafka topic={} key={} eventId={} eventType={}: {}",
