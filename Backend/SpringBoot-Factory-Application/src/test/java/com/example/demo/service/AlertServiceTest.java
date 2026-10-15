@@ -46,6 +46,9 @@ class AlertServiceTest {
     @Mock
     private WebSocketEventPublisherService webSocketEventPublisherService;
 
+    @Mock
+    private KafkaEventPublisherService kafkaEventPublisherService;
+
     @InjectMocks
     private AlertService alertService;
 

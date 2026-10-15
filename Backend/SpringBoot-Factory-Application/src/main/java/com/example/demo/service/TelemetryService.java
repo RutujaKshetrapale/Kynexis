@@ -26,19 +26,22 @@ public class TelemetryService {
     private final DomainValidationService domainValidationService;
     private final WebSocketEventPublisherService webSocketEventPublisherService;
     private final AlertEngineService alertEngineService;
+    private final KafkaEventPublisherService kafkaEventPublisherService;
 
     public TelemetryService(
             TelemetryRepository telemetryRepository,
             MachineRepository machineRepository,
             DomainValidationService domainValidationService,
             WebSocketEventPublisherService webSocketEventPublisherService,
-            AlertEngineService alertEngineService) {
+            AlertEngineService alertEngineService,
+            KafkaEventPublisherService kafkaEventPublisherService) {
 
         this.telemetryRepository = telemetryRepository;
         this.machineRepository = machineRepository;
         this.domainValidationService = domainValidationService;
         this.webSocketEventPublisherService = webSocketEventPublisherService;
         this.alertEngineService = alertEngineService;
+        this.kafkaEventPublisherService = kafkaEventPublisherService;
     }
 
     public Telemetry create(TelemetryRequest request) {
@@ -71,6 +74,9 @@ public class TelemetryService {
         Telemetry savedTelemetry = telemetryRepository.save(telemetry);
         log.info("Telemetry saved successfully id={} machineId={}", savedTelemetry.getId(), request.getMachineId());
         webSocketEventPublisherService.publishTelemetry(savedTelemetry);
+        if (kafkaEventPublisherService != null) {
+            kafkaEventPublisherService.publishTelemetryRecorded(savedTelemetry);
+        }
 
         if (alertEngineService != null) {
             try {

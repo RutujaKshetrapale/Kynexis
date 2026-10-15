@@ -54,6 +54,9 @@ class TelemetryServiceTest {
     @Mock
     private AlertEngineService alertEngineService;
 
+    @Mock
+    private KafkaEventPublisherService kafkaEventPublisherService;
+
     @InjectMocks
     private TelemetryService telemetryService;
 
@@ -144,6 +147,9 @@ class TelemetryServiceTest {
 
         verify(telemetryRepository, times(1))
                 .save(any(Telemetry.class));
+
+        verify(kafkaEventPublisherService, times(1))
+                .publishTelemetryRecorded(any(Telemetry.class));
     }
 
     @Test

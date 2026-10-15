@@ -27,15 +27,18 @@ public class AlertService {
     private final AlertRepository alertRepository;
     private final MachineRepository machineRepository;
     private final WebSocketEventPublisherService webSocketEventPublisherService;
+    private final KafkaEventPublisherService kafkaEventPublisherService;
 
     public AlertService(
             AlertRepository alertRepository,
             MachineRepository machineRepository,
-            WebSocketEventPublisherService webSocketEventPublisherService) {
+            WebSocketEventPublisherService webSocketEventPublisherService,
+            KafkaEventPublisherService kafkaEventPublisherService) {
 
         this.alertRepository = alertRepository;
         this.machineRepository = machineRepository;
         this.webSocketEventPublisherService = webSocketEventPublisherService;
+        this.kafkaEventPublisherService = kafkaEventPublisherService;
     }
 
     // =========================
@@ -72,6 +75,9 @@ public class AlertService {
         Alert savedAlert = alertRepository.save(alert);
         log.info("Alert created successfully id={} machineId={}", savedAlert.getId(), request.getMachineId());
         webSocketEventPublisherService.publishAlert(savedAlert);
+        if (kafkaEventPublisherService != null) {
+            kafkaEventPublisherService.publishAlertCreated(savedAlert);
+        }
         return savedAlert;
     }
 
@@ -234,6 +240,13 @@ public class AlertService {
         Alert updatedAlert = alertRepository.save(alert);
         log.info("Alert updated successfully id={}", id);
         webSocketEventPublisherService.publishAlert(updatedAlert);
+        if (kafkaEventPublisherService != null) {
+            if (updatedAlert.isResolved()) {
+                kafkaEventPublisherService.publishAlertResolved(updatedAlert);
+            } else {
+                kafkaEventPublisherService.publishAlertUpdated(updatedAlert);
+            }
+        }
         return updatedAlert;
     }
 
