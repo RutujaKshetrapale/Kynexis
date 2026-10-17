@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.ProductionRequest;
@@ -17,6 +19,7 @@ import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.ProductionRepository;
 
 @Service
+@DomainBoundary(BoundedContext.PRODUCTION_AND_ENERGY)
 public class ProductionService {
 
     private final ProductionRepository productionRepository;

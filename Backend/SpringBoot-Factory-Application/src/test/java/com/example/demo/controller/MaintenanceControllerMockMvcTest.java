@@ -76,10 +76,10 @@ class MaintenanceControllerMockMvcTest {
                     "type": "PREVENTIVE",
                     "description": "Quarterly lubrication and filter replacement",
                     "status": "SCHEDULED",
-                    "scheduledDate": "2026-10-15",
+                    "scheduledDate": "%s",
                     "technician": "Tech John"
                 }
-                """;
+                """.formatted(LocalDate.now().plusDays(7));
 
         mockMvc.perform(post("/api/maintenance")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -121,10 +121,10 @@ class MaintenanceControllerMockMvcTest {
                     "type": "PREVENTIVE",
                     "description": "Updated description",
                     "status": "IN_PROGRESS",
-                    "scheduledDate": "2026-10-15",
+                    "scheduledDate": "%s",
                     "technician": "Tech John"
                 }
-                """;
+                """.formatted(LocalDate.now().plusDays(7));
 
         mockMvc.perform(put("/api/maintenance/1")
                 .contentType(MediaType.APPLICATION_JSON)

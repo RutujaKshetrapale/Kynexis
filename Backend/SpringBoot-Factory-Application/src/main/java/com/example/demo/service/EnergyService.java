@@ -8,6 +8,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.EnergyRequest;
@@ -18,6 +20,7 @@ import com.example.demo.repository.EnergyRepository;
 import com.example.demo.repository.MachineRepository;
 
 @Service
+@DomainBoundary(BoundedContext.PRODUCTION_AND_ENERGY)
 public class EnergyService {
 
     private final EnergyRepository energyRepository;

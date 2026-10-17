@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.SensorRequest;
@@ -17,6 +19,7 @@ import com.example.demo.repository.MachineRepository;
 import com.example.demo.repository.SensorRepository;
 
 @Service
+@DomainBoundary(BoundedContext.PLANT_AND_MACHINE)
 public class SensorService {
 
     private final SensorRepository sensorRepository;

@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.MachineHealthProperties;
 import com.example.demo.dto.MachineHealthResponse;
 import com.example.demo.entity.Alert;
@@ -29,6 +31,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@DomainBoundary(BoundedContext.HEALTH_AND_PREDICTIVE_MAINTENANCE)
 public class MachineHealthService {
 
     private final MachineRepository machineRepository;

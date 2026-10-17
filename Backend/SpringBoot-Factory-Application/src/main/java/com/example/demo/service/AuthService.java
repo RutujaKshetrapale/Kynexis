@@ -3,6 +3,8 @@ package com.example.demo.service;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.LoginResponse;
 import com.example.demo.dto.RegisterRequest;
@@ -15,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@DomainBoundary(BoundedContext.IDENTITY_AND_ACCESS)
 public class AuthService {
 
     private final UserRepository userRepository;

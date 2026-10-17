@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.dto.TelemetryRequest;
 import com.example.demo.entity.Machine;
 import com.example.demo.entity.Telemetry;
@@ -19,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@DomainBoundary(BoundedContext.TELEMETRY)
 public class TelemetryService {
 
     private final TelemetryRepository telemetryRepository;

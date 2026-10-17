@@ -17,6 +17,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.PredictiveMaintenanceProperties;
 import com.example.demo.dto.PredictiveMaintenanceResponse;
 import com.example.demo.entity.Alert;
@@ -35,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@DomainBoundary(BoundedContext.HEALTH_AND_PREDICTIVE_MAINTENANCE)
 public class PredictiveMaintenanceService {
 
     private static final String DEFAULT_ADVISORY_NOTICE =

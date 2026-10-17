@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.dto.MaintenanceRequest;
 import com.example.demo.entity.Machine;
 import com.example.demo.entity.Maintenance;
@@ -18,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@DomainBoundary(BoundedContext.HEALTH_AND_PREDICTIVE_MAINTENANCE)
 public class MaintenanceService {
 
     private final MaintenanceRepository maintenanceRepository;

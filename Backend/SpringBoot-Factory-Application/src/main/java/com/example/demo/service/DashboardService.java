@@ -3,6 +3,8 @@ package com.example.demo.service;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.CacheConfig;
 import com.example.demo.dto.DashboardMachineStatusResponse;
 import com.example.demo.dto.DashboardSummaryResponse;
@@ -13,8 +15,8 @@ import com.example.demo.repository.PlantRepository;
 import com.example.demo.repository.ProductionRepository;
 import com.example.demo.repository.SensorRepository;
 
-
 @Service
+@DomainBoundary(BoundedContext.DASHBOARD_AGGREGATION)
 public class DashboardService {
 
     private final PlantRepository plantRepository;

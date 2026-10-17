@@ -1,6 +1,7 @@
 package com.example.demo.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
@@ -8,6 +9,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
+import com.example.demo.architecture.contract.MachineQueryContract;
+import com.example.demo.architecture.contract.dto.MachineSummaryDTO;
 import com.example.demo.config.CacheConfig;
 
 import com.example.demo.dto.MachineRequest;
@@ -23,7 +28,8 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
-public class MachineService {
+@DomainBoundary(BoundedContext.PLANT_AND_MACHINE)
+public class MachineService implements MachineQueryContract {
 
     private final MachineRepository machineRepository;
     private final PlantRepository plantRepository;
@@ -272,5 +278,31 @@ public class MachineService {
 
         machineRepository.delete(machine);
         log.info("Machine deleted successfully id={}", id);
+    }
+
+    // ============================================================
+    // ARCHITECTURAL SERVICE CONTRACT: MachineQueryContract
+    // ============================================================
+
+    @Override
+    public boolean existsById(Long id) {
+        if (id == null) {
+            return false;
+        }
+        return machineRepository.existsById(id);
+    }
+
+    @Override
+    public Optional<MachineSummaryDTO> findSummaryById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return machineRepository.findById(id).map(m -> MachineSummaryDTO.builder()
+                .id(m.getId())
+                .name(m.getName())
+                .type(m.getType())
+                .status(m.getStatus())
+                .plantId(m.getPlant() != null ? m.getPlant().getId() : null)
+                .build());
     }
 }

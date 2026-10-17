@@ -8,6 +8,8 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.demo.architecture.BoundedContext;
+import com.example.demo.architecture.DomainBoundary;
 import com.example.demo.config.AlertEngineProperties;
 import com.example.demo.dto.AlertRequest;
 import com.example.demo.entity.Alert;
@@ -20,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Service
+@DomainBoundary(BoundedContext.ALERT_MANAGEMENT)
 public class AlertEngineService {
 
     private final AlertEngineProperties properties;

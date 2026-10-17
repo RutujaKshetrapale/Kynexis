@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,16 +69,17 @@ class MaintenanceIntegrationTest {
                 .andReturn();
         long machineId = objectMapper.readTree(machineResult.getResponse().getContentAsString()).get("id").asLong();
 
+        String futureDate = LocalDate.now().plusDays(7).toString();
         String maintenanceJson = String.format("""
                 {
                     "machineId": %d,
                     "type": "PREVENTIVE",
                     "description": "Fluid change and seal inspection",
                     "status": "SCHEDULED",
-                    "scheduledDate": "2026-10-20",
+                    "scheduledDate": "%s",
                     "technician": "Tech John"
                 }
-                """, machineId);
+                """, machineId, futureDate);
 
         MvcResult maintenanceResult = mockMvc.perform(post("/api/maintenance")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -98,10 +101,10 @@ class MaintenanceIntegrationTest {
                     "type": "PREVENTIVE",
                     "description": "Fluid change and seal inspection",
                     "status": "IN_PROGRESS",
-                    "scheduledDate": "2026-10-20",
+                    "scheduledDate": "%s",
                     "technician": "Tech John"
                 }
-                """, machineId);
+                """, machineId, futureDate);
 
         mockMvc.perform(put("/api/maintenance/" + maintenanceId)
                 .contentType(MediaType.APPLICATION_JSON)
