@@ -7,21 +7,10 @@
 CREATE DATABASE IF NOT EXISTS smart_factory_db;
 USE smart_factory_db;
 
--- Drop tables in reverse dependency order if needed during setup
-DROP TABLE IF EXISTS energy;
-DROP TABLE IF EXISTS production;
-DROP TABLE IF EXISTS maintenance;
-DROP TABLE IF EXISTS alerts;
-DROP TABLE IF EXISTS telemetry;
-DROP TABLE IF EXISTS sensors;
-DROP TABLE IF EXISTS machines;
-DROP TABLE IF EXISTS plants;
-DROP TABLE IF EXISTS users;
-
 -- ============================================================
 -- 1. PLANTS TABLE
 -- ============================================================
-CREATE TABLE plants (
+CREATE TABLE IF NOT EXISTS plants (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     location VARCHAR(150) NOT NULL,
@@ -33,7 +22,7 @@ CREATE TABLE plants (
 -- ============================================================
 -- 2. MACHINES TABLE
 -- ============================================================
-CREATE TABLE machines (
+CREATE TABLE IF NOT EXISTS machines (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     type VARCHAR(100) NOT NULL,
@@ -47,7 +36,7 @@ CREATE TABLE machines (
 -- ============================================================
 -- 3. SENSORS TABLE
 -- ============================================================
-CREATE TABLE sensors (
+CREATE TABLE IF NOT EXISTS sensors (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     type VARCHAR(50) NOT NULL,
@@ -62,7 +51,7 @@ CREATE TABLE sensors (
 -- ============================================================
 -- 4. TELEMETRY TABLE
 -- ============================================================
-CREATE TABLE telemetry (
+CREATE TABLE IF NOT EXISTS telemetry (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     temperature DOUBLE NOT NULL,
     vibration DOUBLE NOT NULL,
@@ -79,7 +68,7 @@ CREATE TABLE telemetry (
 -- ============================================================
 -- 5. ALERTS TABLE
 -- ============================================================
-CREATE TABLE alerts (
+CREATE TABLE IF NOT EXISTS alerts (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(50) NOT NULL,
     severity VARCHAR(30) NOT NULL,
@@ -99,7 +88,7 @@ CREATE TABLE alerts (
 -- ============================================================
 -- 6. MAINTENANCE TABLE
 -- ============================================================
-CREATE TABLE maintenance (
+CREATE TABLE IF NOT EXISTS maintenance (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     type VARCHAR(50) NOT NULL,
     description VARCHAR(500) NOT NULL,
@@ -118,7 +107,7 @@ CREATE TABLE maintenance (
 -- ============================================================
 -- 7. PRODUCTION TABLE
 -- ============================================================
-CREATE TABLE production (
+CREATE TABLE IF NOT EXISTS production (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     product_name VARCHAR(100) NOT NULL,
     quantity_produced INT NOT NULL,
@@ -136,7 +125,7 @@ CREATE TABLE production (
 -- ============================================================
 -- 8. ENERGY TABLE
 -- ============================================================
-CREATE TABLE energy (
+CREATE TABLE IF NOT EXISTS energy (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     energy_consumption DOUBLE NOT NULL,
     recorded_at DATETIME NOT NULL,
@@ -150,7 +139,7 @@ CREATE TABLE energy (
 -- ============================================================
 -- 9. USERS TABLE
 -- ============================================================
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
     email VARCHAR(150) NOT NULL,

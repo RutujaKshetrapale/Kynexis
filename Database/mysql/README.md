@@ -11,7 +11,7 @@ This directory maintains the canonical database schema and development seed data
 * **Charset**: `utf8mb4`
 * **Collation**: `utf8mb4_unicode_ci`
 * **Storage Engine**: `InnoDB`
-* **Total Tables**: 9
+* **Total Tables**: 11
 
 ### Schema Architecture
 
@@ -30,8 +30,8 @@ This directory maintains the canonical database schema and development seed data
   +---------+ +--------+ +------+ +-------------+ +----------+ +--------+
   | sensors | |telemetry| |energy| |maintenance | |production| | alerts |
   +---------+ +--------+ +------+ +-------------+ +----------+ +--------+
-                                                                    |
-                                                                    * (telemetry_id)
+                 |                                                 |
+                 * (outbox_events)                                 * (processed_events)
 ```
 
 ---
@@ -64,17 +64,22 @@ This directory maintains the canonical database schema and development seed data
 
 1. **Clone & Navigate**:
    ```bash
-   cd Kynexis/database/mysql
+   cd Kynexis/Database/mysql
    ```
 
-2. **Execute Schema Creation**:
+2. **Execute Non-Destructive Schema Creation**:
    ```bash
    mysql -u <DB_USERNAME> -p < schema.sql
    ```
 
-3. **Execute Development Seed Data**:
+3. **Execute Repeatable Development Seed Data**:
    ```bash
    mysql -u <DB_USERNAME> -p < seed_data.sql
+   ```
+
+4. **Development-Only Database Reset** *(Optional - Drops and recreates all tables)*:
+   ```bash
+   mysql -u <DB_USERNAME> -p < reset_dev_db.sql
    ```
 
 ---
