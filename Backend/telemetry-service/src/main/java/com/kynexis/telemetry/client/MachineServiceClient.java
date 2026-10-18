@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.kynexis.common.client.RestClientHelper;
+import com.kynexis.telemetry.common.client.RestClientHelper;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -15,7 +15,7 @@ public class MachineServiceClient {
     private final RestClient restClient;
 
     public MachineServiceClient(
-            @Value("${kynexis.services.plant-machine-service.url:http://localhost:8082}") String serviceUrl,
+            @Value("${kynexis.services.machine-service.url:http://localhost:8088}") String serviceUrl,
             @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {
         this.restClient = RestClientHelper.createClient(serviceUrl, internalSecret);
     }

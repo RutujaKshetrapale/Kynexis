@@ -16,7 +16,7 @@ services:
       - ./Database/mysql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
       - ./Database/mysql/seed_data.sql:/docker-entrypoint-initdb.d/02_seed_data.sql:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD:-root} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -70,12 +70,12 @@ services:
       - kynexis-network
 
   # ============================================================
-  # Application Microservices
+  # Application Microservices (10 Services)
   # ============================================================
-  identity-service:
+  authentication-service:
     build:
-      context: ./Backend/identity-service
-    container_name: kynexis-identity-service
+      context: ./Backend/authentication-service
+    container_name: kynexis-authentication-service
     restart: unless-stopped
     ports:
       - "8081:8081"
@@ -98,10 +98,10 @@ services:
     networks:
       - kynexis-network
 
-  plant-machine-service:
+  plant-service:
     build:
-      context: ./Backend/plant-machine-service
-    container_name: kynexis-plant-machine-service
+      context: ./Backend/plant-service
+    container_name: kynexis-plant-service
     restart: unless-stopped
     ports:
       - "8082:8082"
@@ -124,6 +124,64 @@ services:
     networks:
       - kynexis-network
 
+  machine-service:
+    build:
+      context: ./Backend/machine-service
+    container_name: kynexis-machine-service
+    restart: unless-stopped
+    ports:
+      - "8088:8088"
+    environment:
+      SERVER_PORT: 8088
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart_factory_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
+      PLANT_SERVICE_URL: http://plant-service:8082
+      JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      plant-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8088/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - kynexis-network
+
+  sensor-service:
+    build:
+      context: ./Backend/sensor-service
+    container_name: kynexis-sensor-service
+    restart: unless-stopped
+    ports:
+      - "8089:8089"
+    environment:
+      SERVER_PORT: 8089
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart_factory_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
+      MACHINE_SERVICE_URL: http://machine-service:8088
+      JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
+      INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      machine-service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8089/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - kynexis-network
+
   telemetry-service:
     build:
       context: ./Backend/telemetry-service
@@ -137,7 +195,8 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      PLANT_MACHINE_SERVICE_URL: http://plant-machine-service:8082
+      MACHINE_SERVICE_URL: http://machine-service:8088
+      SENSOR_SERVICE_URL: http://sensor-service:8089
       JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
     depends_on:
@@ -145,7 +204,9 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-      plant-machine-service:
+      machine-service:
+        condition: service_started
+      sensor-service:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep UP || exit 1"]
@@ -169,6 +230,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MACHINE_SERVICE_URL: http://machine-service:8088
       JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
     depends_on:
@@ -176,6 +238,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      machine-service:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep UP || exit 1"]
       interval: 15s
@@ -197,7 +261,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart_factory_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
-      PLANT_MACHINE_SERVICE_URL: http://plant-machine-service:8082
+      MACHINE_SERVICE_URL: http://machine-service:8088
       TELEMETRY_SERVICE_URL: http://telemetry-service:8083
       ALERT_SERVICE_URL: http://alert-service:8084
       JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
@@ -205,7 +269,7 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
-      plant-machine-service:
+      machine-service:
         condition: service_started
       telemetry-service:
         condition: service_started
@@ -220,10 +284,10 @@ services:
     networks:
       - kynexis-network
 
-  production-energy-service:
+  production-service:
     build:
-      context: ./Backend/production-energy-service
-    container_name: kynexis-production-energy-service
+      context: ./Backend/production-service
+    container_name: kynexis-production-service
     restart: unless-stopped
     ports:
       - "8086:8086"
@@ -232,13 +296,13 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart_factory_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
-      PLANT_MACHINE_SERVICE_URL: http://plant-machine-service:8082
+      MACHINE_SERVICE_URL: http://machine-service:8088
       JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
     depends_on:
       mysql:
         condition: service_healthy
-      plant-machine-service:
+      machine-service:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8086/actuator/health | grep UP || exit 1"]
@@ -249,30 +313,25 @@ services:
     networks:
       - kynexis-network
 
-  dashboard-service:
+  energy-service:
     build:
-      context: ./Backend/dashboard-service
-    container_name: kynexis-dashboard-service
+      context: ./Backend/energy-service
+    container_name: kynexis-energy-service
     restart: unless-stopped
     ports:
       - "8087:8087"
     environment:
       SERVER_PORT: 8087
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      PLANT_MACHINE_SERVICE_URL: http://plant-machine-service:8082
-      ALERT_SERVICE_URL: http://alert-service:8084
-      PRODUCTION_ENERGY_SERVICE_URL: http://production-energy-service:8086
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart_factory_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
+      MACHINE_SERVICE_URL: http://machine-service:8088
       JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
     depends_on:
-      redis:
+      mysql:
         condition: service_healthy
-      plant-machine-service:
-        condition: service_started
-      alert-service:
-        condition: service_started
-      production-energy-service:
+      machine-service:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8087/actuator/health | grep UP || exit 1"]
@@ -292,19 +351,25 @@ services:
       - "8080:8080"
     environment:
       SERVER_PORT: 8080
-      IDENTITY_SERVICE_URL: http://identity-service:8081
-      PLANT_MACHINE_SERVICE_URL: http://plant-machine-service:8082
+      AUTHENTICATION_SERVICE_URL: http://authentication-service:8081
+      PLANT_SERVICE_URL: http://plant-service:8082
+      MACHINE_SERVICE_URL: http://machine-service:8088
+      SENSOR_SERVICE_URL: http://sensor-service:8089
       TELEMETRY_SERVICE_URL: http://telemetry-service:8083
       ALERT_SERVICE_URL: http://alert-service:8084
       MAINTENANCE_SERVICE_URL: http://maintenance-service:8085
-      PRODUCTION_ENERGY_SERVICE_URL: http://production-energy-service:8086
-      DASHBOARD_SERVICE_URL: http://dashboard-service:8087
+      PRODUCTION_SERVICE_URL: http://production-service:8086
+      ENERGY_SERVICE_URL: http://energy-service:8087
       JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET:-KynexisInternalServiceCommunicationSecretKey2026}
     depends_on:
-      identity-service:
+      authentication-service:
         condition: service_started
-      plant-machine-service:
+      plant-service:
+        condition: service_started
+      machine-service:
+        condition: service_started
+      sensor-service:
         condition: service_started
       telemetry-service:
         condition: service_started
@@ -312,9 +377,9 @@ services:
         condition: service_started
       maintenance-service:
         condition: service_started
-      production-energy-service:
+      production-service:
         condition: service_started
-      dashboard-service:
+      energy-service:
         condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1"]
@@ -322,35 +387,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks:
-      - kynexis-network
-
-  # ============================================================
-  # Legacy Monolith (Retained for migration baseline on port 8090)
-  # ============================================================
-  legacy-monolith:
-    build:
-      context: ./Backend/SpringBoot-Factory-Application
-    container_name: kynexis-legacy-monolith
-    profiles: ["legacy"]
-    ports:
-      - "8090:8090"
-    environment:
-      SERVER_PORT: 8090
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smart_factory_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-root}
-      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-root}
-      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      SPRING_DATA_REDIS_HOST: redis
-      SPRING_DATA_REDIS_PORT: 6379
-      JWT_SECRET: ${JWT_SECRET:-SmartFactorySecretKeyForDevelopmentOnly123456789}
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
     networks:
       - kynexis-network
 

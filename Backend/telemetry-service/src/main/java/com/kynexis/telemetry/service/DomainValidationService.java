@@ -2,7 +2,7 @@ package com.kynexis.telemetry.service;
 
 import org.springframework.stereotype.Service;
 
-import com.kynexis.common.exception.BusinessValidationException;
+import com.kynexis.telemetry.common.exception.BusinessValidationException;
 
 @Service
 public class DomainValidationService {

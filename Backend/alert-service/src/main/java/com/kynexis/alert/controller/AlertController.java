@@ -14,8 +14,8 @@ import org.springframework.web.bind.annotation.*;
 import com.kynexis.alert.dto.AlertDTO;
 import com.kynexis.alert.dto.AlertRequest;
 import com.kynexis.alert.service.AlertService;
-import com.kynexis.common.dto.PageResponse;
-import com.kynexis.common.exception.BusinessValidationException;
+import com.kynexis.alert.common.dto.PageResponse;
+import com.kynexis.alert.common.exception.BusinessValidationException;
 
 import jakarta.validation.Valid;
 

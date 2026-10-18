@@ -11,8 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.kynexis.common.dto.PageResponse;
-import com.kynexis.common.exception.BusinessValidationException;
+import com.kynexis.telemetry.common.dto.PageResponse;
+import com.kynexis.telemetry.common.exception.BusinessValidationException;
 import com.kynexis.telemetry.dto.TelemetryDTO;
 import com.kynexis.telemetry.dto.TelemetryRequest;
 import com.kynexis.telemetry.service.TelemetryService;

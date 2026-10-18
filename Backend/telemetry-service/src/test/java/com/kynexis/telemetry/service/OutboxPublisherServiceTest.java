@@ -17,7 +17,7 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.telemetry.common.dto.event.MachineTelemetryRecorded;
 import com.kynexis.telemetry.entity.OutboxEvent;
 import com.kynexis.telemetry.entity.OutboxStatus;
 import com.kynexis.telemetry.repository.OutboxEventRepository;

@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-@ComponentScan(basePackages = {"com.kynexis.telemetry", "com.kynexis.common"})
 public class TelemetryServiceApplication {
 
     public static void main(String[] args) {

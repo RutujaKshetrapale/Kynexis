@@ -1,7 +1,7 @@
 package com.kynexis.alert.service.alert;
 
 import com.kynexis.alert.config.AlertEngineProperties;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.alert.common.dto.event.MachineTelemetryRecorded;
 
 public interface AlertRule {
 

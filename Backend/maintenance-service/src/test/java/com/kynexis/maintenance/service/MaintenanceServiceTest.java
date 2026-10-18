@@ -20,10 +20,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
-import com.kynexis.common.dto.MachineSummaryDTO;
-import com.kynexis.common.exception.BusinessValidationException;
-import com.kynexis.common.exception.ResourceNotFoundException;
-import com.kynexis.common.model.HealthState;
+import com.kynexis.maintenance.common.dto.MachineSummaryDTO;
+import com.kynexis.maintenance.common.exception.BusinessValidationException;
+import com.kynexis.maintenance.common.exception.ResourceNotFoundException;
+import com.kynexis.maintenance.common.model.HealthState;
 import com.kynexis.maintenance.client.AlertServiceClient;
 import com.kynexis.maintenance.client.AlertServiceClient.AlertSnapshot;
 import com.kynexis.maintenance.client.MachineServiceClient;

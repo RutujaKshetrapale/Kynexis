@@ -36,19 +36,21 @@ This directory maintains the canonical database schema and development seed data
 
 ---
 
-## 2. Table Index
+## 2. Table Index & Microservice Ownership
 
-| # | Table Name | Purpose | Foreign Keys |
-|---|------------|---------|--------------|
-| 1 | `plants` | Industrial manufacturing sites and facility locations | None |
-| 2 | `machines` | Industrial equipment and machinery assets | `plant_id` → `plants(id)` |
-| 3 | `sensors` | IoT sensors attached to machinery | `machine_id` → `machines(id)` |
-| 4 | `telemetry` | Real-time sensor metrics (temperature, vibration, pressure, RPM) | `machine_id` → `machines(id)` |
-| 5 | `alerts` | System alerts and threshold warnings | `machine_id` → `machines(id)`, `telemetry_id` → `telemetry(id)` |
-| 6 | `maintenance` | Preventive and corrective maintenance work orders | `machine_id` → `machines(id)` |
-| 7 | `production` | Manufacturing batch outputs and quality metrics | `machine_id` → `machines(id)` |
-| 8 | `energy` | Kilowatt-hour energy consumption records | `machine_id` → `machines(id)` |
-| 9 | `users` | User authentication, RBAC roles (`ADMIN`, `ENGINEER`, `OPERATOR`, `MANAGER`) | None |
+| # | Table Name | Owning Microservice | Purpose | Foreign Keys |
+|---|------------|---------------------|---------|--------------|
+| 1 | `plants` | `plant-service` | Industrial manufacturing sites and facility locations | None |
+| 2 | `machines` | `machine-service` | Industrial equipment and machinery assets | `plant_id` → `plants(id)` |
+| 3 | `sensors` | `sensor-service` | IoT sensors attached to machinery | `machine_id` → `machines(id)` |
+| 4 | `telemetry` | `telemetry-service` | Real-time sensor metrics (temperature, vibration, pressure, RPM) | `machine_id` → `machines(id)` |
+| 5 | `outbox_events` | `telemetry-service` | Transactional outbox for dual-write prevention to Kafka | None |
+| 6 | `alerts` | `alert-service` | System alerts and threshold warnings | `machine_id` → `machines(id)`, `telemetry_id` → `telemetry(id)` |
+| 7 | `processed_events` | `alert-service` | Idempotent event processing tracker for deduplication | None |
+| 8 | `maintenance` | `maintenance-service` | Preventive and corrective maintenance work orders | `machine_id` → `machines(id)` |
+| 9 | `production` | `production-service` | Manufacturing batch outputs and quality metrics | `machine_id` → `machines(id)` |
+| 10 | `energy` | `energy-service` | Kilowatt-hour energy consumption records | `machine_id` → `machines(id)` |
+| 11 | `users` | `authentication-service` | User authentication, RBAC roles (`ADMIN`, `ENGINEER`, `OPERATOR`, `MANAGER`) | None |
 
 ---
 

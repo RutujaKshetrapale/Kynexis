@@ -6,9 +6,12 @@ import org.slf4j.MDC;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import com.kynexis.common.dto.event.FactoryEventDTO;
-import com.kynexis.common.dto.event.FactoryEventDTO.*;
-import com.kynexis.common.logging.LoggingConstants;
+import com.kynexis.gateway.common.logging.LoggingConstants;
+import com.kynexis.gateway.dto.event.FactoryEventDTO;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.AlertPayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.MachineStatusPayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.MaintenancePayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.TelemetryPayload;
 
 import lombok.extern.slf4j.Slf4j;
 

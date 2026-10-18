@@ -18,9 +18,9 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
-import com.kynexis.common.exception.ResourceNotFoundException;
-import com.kynexis.common.logging.LoggingConstants;
+import com.kynexis.telemetry.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.telemetry.common.exception.ResourceNotFoundException;
+import com.kynexis.telemetry.common.logging.LoggingConstants;
 import com.kynexis.telemetry.client.MachineServiceClient;
 import com.kynexis.telemetry.dto.TelemetryDTO;
 import com.kynexis.telemetry.dto.TelemetryRequest;

@@ -2,11 +2,16 @@ package com.kynexis.gateway.controller;
 
 import java.io.InputStream;
 import java.net.URI;
-import java.util.*;
+import java.util.Enumeration;
+import java.util.Map;
+import java.util.UUID;
 
 import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,8 +21,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
-import com.kynexis.common.client.RestClientHelper;
-import com.kynexis.common.logging.LoggingConstants;
+import com.kynexis.gateway.common.client.RestClientHelper;
+import com.kynexis.gateway.common.logging.LoggingConstants;
 import com.kynexis.gateway.config.GatewayProperties;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -127,7 +132,7 @@ public class GatewayRoutingController {
         if (path == null) return null;
 
         if (path.startsWith("/api/auth")) {
-            return gatewayProperties.getIdentityService().getUrl();
+            return gatewayProperties.getAuthenticationService().getUrl();
         }
 
         // Special machine health & maintenance routing
@@ -137,8 +142,16 @@ public class GatewayRoutingController {
             return gatewayProperties.getMaintenanceService().getUrl();
         }
 
-        if (path.startsWith("/api/plants") || path.startsWith("/api/machines") || path.startsWith("/api/sensors")) {
-            return gatewayProperties.getPlantMachineService().getUrl();
+        if (path.startsWith("/api/plants")) {
+            return gatewayProperties.getPlantService().getUrl();
+        }
+
+        if (path.startsWith("/api/machines")) {
+            return gatewayProperties.getMachineService().getUrl();
+        }
+
+        if (path.startsWith("/api/sensors")) {
+            return gatewayProperties.getSensorService().getUrl();
         }
 
         if (path.startsWith("/api/telemetry")) {
@@ -154,12 +167,12 @@ public class GatewayRoutingController {
             return gatewayProperties.getMaintenanceService().getUrl();
         }
 
-        if (path.startsWith("/api/production") || path.startsWith("/api/energy")) {
-            return gatewayProperties.getProductionEnergyService().getUrl();
+        if (path.startsWith("/api/production")) {
+            return gatewayProperties.getProductionService().getUrl();
         }
 
-        if (path.startsWith("/api/dashboard")) {
-            return gatewayProperties.getDashboardService().getUrl();
+        if (path.startsWith("/api/energy")) {
+            return gatewayProperties.getEnergyService().getUrl();
         }
 
         return null;
@@ -198,21 +211,23 @@ public class GatewayRoutingController {
 
         Object userIdAttr = request.getAttribute("X-User-Id");
         if (userIdAttr != null) {
-            headers.set("X-User-Id", userIdAttr.toString());
+            headers.set(LoggingConstants.USER_ID_HEADER, userIdAttr.toString());
         }
 
-        Object rolesAttr = request.getAttribute("X-User-Roles");
-        if (rolesAttr != null) {
-            headers.set("X-User-Roles", rolesAttr.toString());
-        } else {
-            Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-            if (auth != null && auth.isAuthenticated()) {
-                String roles = auth.getAuthorities().stream()
-                        .map(GrantedAuthority::getAuthority)
-                        .reduce((a, b) -> a + "," + b)
-                        .orElse("");
-                headers.set("X-User-Roles", roles);
-            }
+        Object userRolesAttr = request.getAttribute("X-User-Roles");
+        if (userRolesAttr != null) {
+            headers.set(LoggingConstants.USER_ROLES_HEADER, userRolesAttr.toString());
+        }
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getPrincipal())) {
+            headers.set("X-Authenticated-User", authentication.getName());
+            String role = authentication.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .map(r -> r.startsWith("ROLE_") ? r.substring(5) : r)
+                    .findFirst()
+                    .orElse("USER");
+            headers.set("X-Authenticated-Role", role);
         }
     }
 }

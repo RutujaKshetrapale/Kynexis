@@ -7,7 +7,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.kynexis.alert.config.AlertEngineProperties;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.alert.common.dto.event.MachineTelemetryRecorded;
 
 class AlertRulesTest {
 

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import com.kynexis.alert.entity.ProcessedEvent;
 import com.kynexis.alert.repository.ProcessedEventRepository;
 import com.kynexis.alert.service.alert.AlertEngineService;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.alert.common.dto.event.MachineTelemetryRecorded;
 
 import lombok.extern.slf4j.Slf4j;
 

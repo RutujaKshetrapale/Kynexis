@@ -8,7 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.kynexis.common.exception.ResourceNotFoundException;
+import com.kynexis.maintenance.common.exception.ResourceNotFoundException;
 import com.kynexis.maintenance.client.MachineServiceClient;
 import com.kynexis.maintenance.dto.MaintenanceDTO;
 import com.kynexis.maintenance.dto.MaintenanceRequest;

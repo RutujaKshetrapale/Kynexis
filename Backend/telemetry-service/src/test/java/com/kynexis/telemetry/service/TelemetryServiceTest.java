@@ -15,7 +15,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.kynexis.common.exception.ResourceNotFoundException;
+import com.kynexis.telemetry.common.exception.ResourceNotFoundException;
 import com.kynexis.telemetry.client.MachineServiceClient;
 import com.kynexis.telemetry.dto.TelemetryDTO;
 import com.kynexis.telemetry.dto.TelemetryRequest;

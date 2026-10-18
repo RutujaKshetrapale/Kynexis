@@ -4,13 +4,16 @@
 
 | Microservice | Owned Tables | Logical Boundary Description | Foreign References Managed |
 | :--- | :--- | :--- | :--- |
-| **`identity-service`** | `users` | User accounts, credentials (BCrypt), RBAC role assignments | None |
-| **`plant-machine-service`** | `plants`, `machines`, `sensors` | Physical and logical hierarchy of smart factories, machines, and connected sensor devices | Internal foreign keys: `machines.plant_id -> plants.id`, `sensors.machine_id -> machines.id` |
-| **`telemetry-service`** | `telemetry`, `outbox_events` | Time-series raw operational sensor telemetry and transactional outbox for reliable event dispatch | Stores foreign `machine_id` (validated via HTTP check to `plant-machine-service`) |
+| **`authentication-service`** | `users` | User accounts, credentials (BCrypt), RBAC role assignments | None |
+| **`plant-service`** | `plants` | Manufacturing plant registry and facility metadata | None |
+| **`machine-service`** | `machines` | Machine equipment registration, status, and plant association | Internal foreign key: `machines.plant_id -> plants.id` |
+| **`sensor-service`** | `sensors` | IoT sensor configuration, metadata, and machine association | Internal foreign key: `sensors.machine_id -> machines.id` |
+| **`telemetry-service`** | `telemetry`, `outbox_events` | Time-series raw operational sensor telemetry and transactional outbox for reliable event dispatch | Stores foreign `machine_id` (validated via HTTP check to `machine-service`) |
 | **`alert-service`** | `alerts`, `processed_events` | Threshold breaches, rule evaluation state, incident lifecycle, and idempotency dedup log | Stores foreign `machine_id` and optional `telemetry_id` |
 | **`maintenance-service`** | `maintenance` | Maintenance work orders, scheduling, technician logs, predictive health assessments | Stores foreign `machine_id` |
-| **`production-energy-service`** | `production`, `energy` | Output metrics, reject ratios, energy consumption logs | Stores foreign `machine_id` |
-| **`dashboard-service`** | *Read model / in-memory cache* | Aggregated operational KPI dashboards (Redis cache) | Aggregates data via HTTP REST clients and Redis cache |
+| **`production-service`** | `production` | Output metrics, reject ratios, batch tracking | Stores foreign `machine_id` |
+| **`energy-service`** | `energy` | Kilowatt-hour energy consumption records, efficiency metrics | Stores foreign `machine_id` |
+| **`api-gateway`** | *Read model / in-memory cache* | Request routing, JWT validation, and aggregated operational KPI dashboards | Aggregates data via HTTP REST clients from downstream services |
 
 ---
 

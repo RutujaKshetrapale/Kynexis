@@ -21,7 +21,7 @@ import com.kynexis.alert.dto.AlertRequest;
 import com.kynexis.alert.entity.Alert;
 import com.kynexis.alert.repository.AlertRepository;
 import com.kynexis.alert.service.AlertService;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.alert.common.dto.event.MachineTelemetryRecorded;
 
 @ExtendWith(MockitoExtension.class)
 class AlertEngineServiceTest {

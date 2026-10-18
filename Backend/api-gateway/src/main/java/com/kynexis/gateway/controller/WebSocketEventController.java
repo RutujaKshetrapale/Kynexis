@@ -6,7 +6,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.kynexis.common.dto.event.FactoryEventDTO.*;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.AlertPayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.MachineStatusPayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.MaintenancePayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.TelemetryPayload;
 import com.kynexis.gateway.service.WebSocketEventPublisherService;
 
 import lombok.extern.slf4j.Slf4j;

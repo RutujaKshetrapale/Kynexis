@@ -17,8 +17,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
-import com.kynexis.common.dto.event.FactoryEventDTO;
-import com.kynexis.common.dto.event.FactoryEventDTO.*;
+import com.kynexis.gateway.dto.event.FactoryEventDTO;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.AlertPayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.MachineStatusPayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.MaintenancePayload;
+import com.kynexis.gateway.dto.event.FactoryEventDTO.TelemetryPayload;
 
 @ExtendWith(MockitoExtension.class)
 class WebSocketEventPublisherServiceTest {

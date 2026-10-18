@@ -4,7 +4,7 @@ import java.time.LocalDate;
 
 import org.springframework.stereotype.Service;
 
-import com.kynexis.common.exception.BusinessValidationException;
+import com.kynexis.maintenance.common.exception.BusinessValidationException;
 
 @Service
 public class DomainValidationService {

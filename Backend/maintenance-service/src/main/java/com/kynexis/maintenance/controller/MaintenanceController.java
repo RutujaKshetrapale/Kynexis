@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.kynexis.common.dto.PageResponse;
+import com.kynexis.maintenance.common.dto.PageResponse;
 import com.kynexis.maintenance.dto.MaintenanceDTO;
 import com.kynexis.maintenance.dto.MaintenanceRequest;
 import com.kynexis.maintenance.service.MaintenanceService;

@@ -3,7 +3,7 @@ package com.kynexis.alert.service.alert;
 import org.springframework.stereotype.Component;
 
 import com.kynexis.alert.config.AlertEngineProperties;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.alert.common.dto.event.MachineTelemetryRecorded;
 
 @Component
 public class PressureLowRule implements AlertRule {

@@ -8,7 +8,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.StompWebSocketEndpointRegistration;
 
-import com.kynexis.common.security.JwtService;
+import com.kynexis.gateway.security.JwtService;
 
 class WebSocketConfigTest {
 

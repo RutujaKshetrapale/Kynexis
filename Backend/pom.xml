@@ -12,16 +12,16 @@
     <description>KYNEXIS Multi-Module Microservices Aggregator</description>
 
     <modules>
-        <module>kynexis-common</module>
-        <module>identity-service</module>
-        <module>plant-machine-service</module>
+        <module>api-gateway</module>
+        <module>authentication-service</module>
+        <module>plant-service</module>
+        <module>machine-service</module>
+        <module>sensor-service</module>
         <module>telemetry-service</module>
         <module>alert-service</module>
         <module>maintenance-service</module>
-        <module>production-energy-service</module>
-        <module>dashboard-service</module>
-        <module>api-gateway</module>
-        <module>SpringBoot-Factory-Application</module>
+        <module>production-service</module>
+        <module>energy-service</module>
     </modules>
 
     <properties>

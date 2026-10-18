@@ -12,10 +12,10 @@ import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 
 import com.kynexis.alert.entity.Alert;
-import com.kynexis.common.dto.event.MachineAlertCreated;
-import com.kynexis.common.dto.event.MachineAlertResolved;
-import com.kynexis.common.dto.event.MachineAlertUpdated;
-import com.kynexis.common.logging.LoggingConstants;
+import com.kynexis.alert.common.dto.event.MachineAlertCreated;
+import com.kynexis.alert.common.dto.event.MachineAlertResolved;
+import com.kynexis.alert.common.dto.event.MachineAlertUpdated;
+import com.kynexis.alert.common.logging.LoggingConstants;
 
 import lombok.extern.slf4j.Slf4j;
 

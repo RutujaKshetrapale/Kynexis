@@ -17,7 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.telemetry.common.dto.event.MachineTelemetryRecorded;
 import com.kynexis.telemetry.entity.Telemetry;
 
 @ExtendWith(MockitoExtension.class)

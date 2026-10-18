@@ -19,7 +19,7 @@ import com.kynexis.alert.dto.AlertDTO;
 import com.kynexis.alert.dto.AlertRequest;
 import com.kynexis.alert.entity.Alert;
 import com.kynexis.alert.repository.AlertRepository;
-import com.kynexis.common.exception.ResourceNotFoundException;
+import com.kynexis.alert.common.exception.ResourceNotFoundException;
 
 @ExtendWith(MockitoExtension.class)
 class AlertServiceTest {

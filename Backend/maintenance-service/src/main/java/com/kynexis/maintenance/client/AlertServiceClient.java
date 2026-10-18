@@ -8,7 +8,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import com.kynexis.common.client.RestClientHelper;
+import com.kynexis.maintenance.common.client.RestClientHelper;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

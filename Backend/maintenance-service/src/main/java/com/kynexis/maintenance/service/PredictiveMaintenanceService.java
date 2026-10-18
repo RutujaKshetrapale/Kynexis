@@ -5,10 +5,10 @@ import java.util.*;
 
 import org.springframework.stereotype.Service;
 
-import com.kynexis.common.dto.MachineSummaryDTO;
-import com.kynexis.common.exception.ResourceNotFoundException;
-import com.kynexis.common.model.DataSufficiency;
-import com.kynexis.common.model.MaintenanceRiskCategory;
+import com.kynexis.maintenance.common.dto.MachineSummaryDTO;
+import com.kynexis.maintenance.common.exception.ResourceNotFoundException;
+import com.kynexis.maintenance.common.model.DataSufficiency;
+import com.kynexis.maintenance.common.model.MaintenanceRiskCategory;
 import com.kynexis.maintenance.client.AlertServiceClient;
 import com.kynexis.maintenance.client.AlertServiceClient.AlertSnapshot;
 import com.kynexis.maintenance.client.MachineServiceClient;

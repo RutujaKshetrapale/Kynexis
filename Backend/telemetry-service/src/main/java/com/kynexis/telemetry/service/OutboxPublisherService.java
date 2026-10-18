@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.kynexis.common.dto.event.MachineTelemetryRecorded;
+import com.kynexis.telemetry.common.dto.event.MachineTelemetryRecorded;
 import com.kynexis.telemetry.entity.OutboxEvent;
 import com.kynexis.telemetry.entity.OutboxStatus;
 import com.kynexis.telemetry.repository.OutboxEventRepository;
