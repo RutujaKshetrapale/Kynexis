@@ -162,3 +162,32 @@ CREATE TABLE users (
     INDEX idx_user_role (role),
     INDEX idx_user_active (active)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 10. TELEMETRY OUTBOX EVENTS TABLE (Dual-Write Prevention)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS outbox_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_id VARCHAR(64) NOT NULL,
+    event_type VARCHAR(128) NOT NULL,
+    topic VARCHAR(128) NOT NULL,
+    partition_key VARCHAR(64) NOT NULL,
+    payload TEXT NOT NULL,
+    status VARCHAR(32) NOT NULL,
+    retry_count INT NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    published_at DATETIME NULL,
+    error_message TEXT NULL,
+    INDEX idx_outbox_status_created (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================
+-- 11. ALERT PROCESSED EVENTS TABLE (Idempotency Deduplication)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS processed_events (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    event_id VARCHAR(64) NOT NULL UNIQUE,
+    event_type VARCHAR(128) NOT NULL,
+    processed_at DATETIME NOT NULL,
+    INDEX idx_processed_event_id (event_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

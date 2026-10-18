@@ -34,7 +34,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/alerts/machine/*/unresolved", "/api/alerts/count/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(internalSecurityFilter, UsernamePasswordAuthenticationFilter.class);

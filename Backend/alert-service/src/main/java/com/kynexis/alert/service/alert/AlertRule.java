@@ -11,5 +11,11 @@ public interface AlertRule {
 
     boolean isEnabled(AlertEngineProperties properties);
 
-    EvaluationResult evaluateTelemetry(MachineTelemetryRecorded reading, AlertEngineProperties properties);
+    default EvaluationResult evaluateTelemetry(MachineTelemetryRecorded reading, AlertEngineProperties properties) {
+        return EvaluationResult.ok();
+    }
+
+    default EvaluationResult evaluateMachineStatus(Long machineId, String machineName, String status, AlertEngineProperties properties) {
+        return EvaluationResult.ok();
+    }
 }

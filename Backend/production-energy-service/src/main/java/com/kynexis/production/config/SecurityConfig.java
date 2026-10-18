@@ -34,7 +34,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/production/metrics/**", "/api/energy/metrics/**").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(internalSecurityFilter, UsernamePasswordAuthenticationFilter.class);

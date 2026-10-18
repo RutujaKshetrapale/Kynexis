@@ -83,13 +83,13 @@ public class AlertEngineService {
                         }
                     } else {
                         AlertRequest createRequest = AlertRequest.builder()
-                                    .machineId(machineId)
-                                    .type(rule.getRuleType())
-                                    .severity(result.getSeverity())
-                                    .message(result.getMessage())
-                                    .resolved(false)
-                                    .telemetryId(reading.getTelemetryId())
-                                    .build();
+                                .machineId(machineId)
+                                .type(rule.getRuleType())
+                                .severity(result.getSeverity())
+                                .message(result.getMessage())
+                                .resolved(false)
+                                .telemetryId(reading.getTelemetryId())
+                                .build();
 
                         AlertDTO created = alertService.create(createRequest);
                         processedAlerts.add(created);
@@ -105,6 +105,74 @@ public class AlertEngineService {
                 }
             } catch (Exception ex) {
                 log.error("Error evaluating rule {} for machineId={}: {}", rule.getRuleType(), machineId, ex.getMessage(), ex);
+            }
+        }
+
+        return processedAlerts;
+    }
+
+    @Transactional
+    public List<AlertDTO> evaluateMachineStatus(Long machineId, String machineName, String status) {
+        if (!properties.isEnabled() || !properties.isMachineStatusEnabled() || machineId == null) {
+            return List.of();
+        }
+
+        log.debug("Evaluating machine status alert rules for machineId={} status={}", machineId, status);
+        List<AlertDTO> processedAlerts = new ArrayList<>();
+
+        for (AlertRule rule : rules) {
+            if (!rule.isEnabled(properties) || rule.getCategory() != RuleCategory.MACHINE) {
+                continue;
+            }
+
+            try {
+                EvaluationResult result = rule.evaluateMachineStatus(machineId, machineName, status, properties);
+                Optional<Alert> existingActiveOpt = alertRepository
+                        .findFirstByMachineIdAndTypeAndResolvedFalseOrderByCreatedAtDesc(machineId, rule.getRuleType());
+
+                if (result.isBreached()) {
+                    if (existingActiveOpt.isPresent()) {
+                        Alert activeAlert = existingActiveOpt.get();
+                        boolean severityChanged = !Objects.equals(activeAlert.getSeverity(), result.getSeverity());
+                        boolean messageChanged = !Objects.equals(activeAlert.getMessage(), result.getMessage());
+
+                        if (severityChanged || messageChanged) {
+                            AlertRequest updateRequest = AlertRequest.builder()
+                                    .machineId(machineId)
+                                    .type(rule.getRuleType())
+                                    .severity(result.getSeverity())
+                                    .message(result.getMessage())
+                                    .resolved(false)
+                                    .build();
+
+                            AlertDTO updated = alertService.update(activeAlert.getId(), updateRequest);
+                            processedAlerts.add(updated);
+                            log.info("Updated machine status alert id={} machineId={} severity={}",
+                                    activeAlert.getId(), machineId, result.getSeverity());
+                        }
+                    } else {
+                        AlertRequest createRequest = AlertRequest.builder()
+                                .machineId(machineId)
+                                .type(rule.getRuleType())
+                                .severity(result.getSeverity())
+                                .message(result.getMessage())
+                                .resolved(false)
+                                .build();
+
+                        AlertDTO created = alertService.create(createRequest);
+                        processedAlerts.add(created);
+                        log.warn("Created machine status alert id={} machineId={} severity={}",
+                                created.getId(), machineId, result.getSeverity());
+                    }
+                } else if (existingActiveOpt.isPresent()) {
+                    Alert activeAlert = existingActiveOpt.get();
+                    AlertDTO resolved = alertService.resolveAlert(activeAlert.getId());
+                    processedAlerts.add(resolved);
+                    log.info("Auto-resolved machine status alert id={} machineId={}", activeAlert.getId(), machineId);
+                }
+            } catch (Exception ex) {
+                log.error("Error evaluating machine status rule {} for machineId={}: {}",
+                        rule.getRuleType(), machineId, ex.getMessage(), ex);
             }
         }
 

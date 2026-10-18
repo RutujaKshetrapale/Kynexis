@@ -24,9 +24,13 @@ import jakarta.validation.Valid;
 public class AlertController {
 
     private final AlertService alertService;
+    private final com.kynexis.alert.service.alert.AlertEngineService alertEngineService;
 
-    public AlertController(AlertService alertService) {
+    public AlertController(
+            AlertService alertService,
+            com.kynexis.alert.service.alert.AlertEngineService alertEngineService) {
         this.alertService = alertService;
+        this.alertEngineService = alertEngineService;
     }
 
     @PostMapping
@@ -152,6 +156,14 @@ public class AlertController {
     public ResponseEntity<Long> countUnresolvedByMachine(@PathVariable Long machineId) {
         return ResponseEntity.ok(alertService.countUnresolvedByMachine(machineId));
     }
+
+    @PostMapping("/evaluate/machine")
+    public ResponseEntity<List<AlertDTO>> evaluateMachineStatus(@RequestBody MachineStatusEvaluationRequest request) {
+        return ResponseEntity.ok(alertEngineService.evaluateMachineStatus(
+                request.machineId(), request.machineName(), request.status()));
+    }
+
+    public record MachineStatusEvaluationRequest(Long machineId, String machineName, String status) {}
 
     private Pageable createPageable(int page, int size, String sortBy, String direction) {
         validate(page, size);

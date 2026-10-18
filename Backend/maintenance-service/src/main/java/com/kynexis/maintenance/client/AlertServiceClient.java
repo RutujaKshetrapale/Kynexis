@@ -8,6 +8,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import com.kynexis.common.client.RestClientHelper;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,8 +23,13 @@ public class AlertServiceClient {
     private final RestClient restClient;
 
     public AlertServiceClient(
-            @Value("${kynexis.services.alert-service.url:http://localhost:8084}") String serviceUrl) {
-        this.restClient = RestClient.builder().baseUrl(serviceUrl).build();
+            @Value("${kynexis.services.alert-service.url:http://localhost:8084}") String serviceUrl,
+            @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {
+        this.restClient = RestClientHelper.createClient(serviceUrl, internalSecret);
+    }
+
+    public AlertServiceClient(String serviceUrl) {
+        this(serviceUrl, "KynexisInternalServiceCommunicationSecretKey2026");
     }
 
     public List<AlertSnapshot> getUnresolvedAlerts(Long machineId) {

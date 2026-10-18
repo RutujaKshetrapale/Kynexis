@@ -1,10 +1,13 @@
 package com.kynexis.dashboard.service;
 
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import com.kynexis.dashboard.client.AlertClient;
 import com.kynexis.dashboard.client.PlantMachineClient;
 import com.kynexis.dashboard.client.ProductionEnergyClient;
+import com.kynexis.dashboard.config.CacheConfig;
 import com.kynexis.dashboard.dto.DashboardMachineStatusResponse;
 import com.kynexis.dashboard.dto.DashboardSummaryResponse;
 
@@ -27,6 +30,7 @@ public class DashboardService {
         this.productionEnergyClient = productionEnergyClient;
     }
 
+    @Cacheable(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, key = "'summary'")
     public DashboardSummaryResponse getSummary() {
         log.debug("Aggregating dashboard summary metrics across services");
 
@@ -56,6 +60,7 @@ public class DashboardService {
                 .build();
     }
 
+    @Cacheable(value = CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS, key = "'machine-status'")
     public DashboardMachineStatusResponse getMachineStatus() {
         log.debug("Aggregating dashboard machine status counts across services");
 
@@ -68,5 +73,20 @@ public class DashboardService {
                 .inactive(inactive)
                 .maintenance(maintenance)
                 .build();
+    }
+
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_SUMMARY, key = "'summary'")
+    public void evictSummaryCache() {
+        log.info("Evicted dashboard summary cache");
+    }
+
+    @CacheEvict(value = CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS, key = "'machine-status'")
+    public void evictMachineStatusCache() {
+        log.info("Evicted dashboard machine status cache");
+    }
+
+    @CacheEvict(value = {CacheConfig.CACHE_DASHBOARD_SUMMARY, CacheConfig.CACHE_DASHBOARD_MACHINE_STATUS}, allEntries = true)
+    public void evictAllDashboardCaches() {
+        log.info("Evicted all dashboard caches");
     }
 }

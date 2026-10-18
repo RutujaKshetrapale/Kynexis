@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import com.kynexis.common.client.RestClientHelper;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -17,8 +19,13 @@ public class ProductionEnergyClient {
     private final RestClient restClient;
 
     public ProductionEnergyClient(
-            @Value("${kynexis.services.production-energy-service.url:http://localhost:8086}") String serviceUrl) {
-        this.restClient = RestClient.builder().baseUrl(serviceUrl).build();
+            @Value("${kynexis.services.production-energy-service.url:http://localhost:8086}") String serviceUrl,
+            @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {
+        this.restClient = RestClientHelper.createClient(serviceUrl, internalSecret);
+    }
+
+    public ProductionEnergyClient(String serviceUrl) {
+        this(serviceUrl, "KynexisInternalServiceCommunicationSecretKey2026");
     }
 
     public ProductionMetrics getProductionMetrics() {

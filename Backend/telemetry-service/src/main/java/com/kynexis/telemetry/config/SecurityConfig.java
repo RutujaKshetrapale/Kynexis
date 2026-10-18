@@ -34,7 +34,6 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/actuator/**").permitAll()
-                .requestMatchers("/api/telemetry/machine/*/latest", "/api/telemetry/machine/*/recent").permitAll()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(internalSecurityFilter, UsernamePasswordAuthenticationFilter.class);

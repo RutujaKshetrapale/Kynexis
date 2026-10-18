@@ -10,4 +10,5 @@ public final class LoggingConstants {
     public static final String USER_ID_HEADER = "X-User-Id";
     public static final String USER_ROLES_HEADER = "X-User-Roles";
     public static final String USER_EMAIL_HEADER = "X-User-Email";
+    public static final String INTERNAL_SECRET_HEADER = "X-Internal-Secret";
 }

@@ -10,6 +10,8 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import com.kynexis.common.client.RestClientHelper;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,8 +25,13 @@ public class TelemetryServiceClient {
     private final RestClient restClient;
 
     public TelemetryServiceClient(
-            @Value("${kynexis.services.telemetry-service.url:http://localhost:8083}") String serviceUrl) {
-        this.restClient = RestClient.builder().baseUrl(serviceUrl).build();
+            @Value("${kynexis.services.telemetry-service.url:http://localhost:8083}") String serviceUrl,
+            @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {
+        this.restClient = RestClientHelper.createClient(serviceUrl, internalSecret);
+    }
+
+    public TelemetryServiceClient(String serviceUrl) {
+        this(serviceUrl, "KynexisInternalServiceCommunicationSecretKey2026");
     }
 
     public Optional<TelemetrySnapshot> getLatestTelemetry(Long machineId) {

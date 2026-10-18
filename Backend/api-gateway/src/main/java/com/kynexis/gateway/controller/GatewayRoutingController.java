@@ -5,6 +5,7 @@ import java.net.URI;
 import java.util.*;
 
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,6 +16,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
+import com.kynexis.common.client.RestClientHelper;
 import com.kynexis.common.logging.LoggingConstants;
 import com.kynexis.gateway.config.GatewayProperties;
 
@@ -27,10 +29,18 @@ public class GatewayRoutingController {
 
     private final GatewayProperties gatewayProperties;
     private final RestClient restClient;
+    private final String internalSecret;
+
+    public GatewayRoutingController(
+            GatewayProperties gatewayProperties,
+            @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {
+        this.gatewayProperties = gatewayProperties;
+        this.internalSecret = internalSecret;
+        this.restClient = RestClientHelper.createClient(null, internalSecret);
+    }
 
     public GatewayRoutingController(GatewayProperties gatewayProperties) {
-        this.gatewayProperties = gatewayProperties;
-        this.restClient = RestClient.builder().build();
+        this(gatewayProperties, "KynexisInternalServiceCommunicationSecretKey2026");
     }
 
     @RequestMapping("/api/**")
@@ -160,7 +170,12 @@ public class GatewayRoutingController {
         while (headerNames != null && headerNames.hasMoreElements()) {
             String name = headerNames.nextElement();
             if (HttpHeaders.HOST.equalsIgnoreCase(name)
-                    || HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(name)) {
+                    || HttpHeaders.CONTENT_LENGTH.equalsIgnoreCase(name)
+                    || HttpHeaders.TRANSFER_ENCODING.equalsIgnoreCase(name)
+                    || LoggingConstants.USER_ID_HEADER.equalsIgnoreCase(name)
+                    || LoggingConstants.USER_ROLES_HEADER.equalsIgnoreCase(name)
+                    || LoggingConstants.USER_EMAIL_HEADER.equalsIgnoreCase(name)
+                    || LoggingConstants.INTERNAL_SECRET_HEADER.equalsIgnoreCase(name)) {
                 continue;
             }
             Enumeration<String> values = source.getHeaders(name);
@@ -179,6 +194,7 @@ public class GatewayRoutingController {
             correlationId = UUID.randomUUID().toString();
         }
         headers.set(LoggingConstants.CORRELATION_ID_HEADER, correlationId);
+        headers.set(LoggingConstants.INTERNAL_SECRET_HEADER, internalSecret);
 
         Object userIdAttr = request.getAttribute("X-User-Id");
         if (userIdAttr != null) {

@@ -3,19 +3,31 @@ package com.kynexis.telemetry.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
+import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.kynexis.common.dto.event.MachineTelemetryRecorded;
 import com.kynexis.common.exception.ResourceNotFoundException;
+import com.kynexis.common.logging.LoggingConstants;
 import com.kynexis.telemetry.client.MachineServiceClient;
 import com.kynexis.telemetry.dto.TelemetryDTO;
 import com.kynexis.telemetry.dto.TelemetryRequest;
+import com.kynexis.telemetry.entity.OutboxEvent;
+import com.kynexis.telemetry.entity.OutboxStatus;
 import com.kynexis.telemetry.entity.Telemetry;
+import com.kynexis.telemetry.repository.OutboxEventRepository;
 import com.kynexis.telemetry.repository.TelemetryRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -28,16 +40,36 @@ public class TelemetryService {
     private final MachineServiceClient machineServiceClient;
     private final DomainValidationService domainValidationService;
     private final KafkaEventPublisherService kafkaEventPublisherService;
+    private final OutboxEventRepository outboxEventRepository;
+    private final OutboxPublisherService outboxPublisherService;
+    private final ObjectMapper objectMapper;
+    private final String telemetryTopic;
+
+    public TelemetryService(
+            TelemetryRepository telemetryRepository,
+            MachineServiceClient machineServiceClient,
+            DomainValidationService domainValidationService,
+            @Autowired(required = false) KafkaEventPublisherService kafkaEventPublisherService,
+            @Autowired(required = false) OutboxEventRepository outboxEventRepository,
+            @Autowired(required = false) OutboxPublisherService outboxPublisherService,
+            @Autowired(required = false) ObjectMapper objectMapper,
+            @Value("${kynexis.kafka.topics.machine-telemetry:kynexis.machine-telemetry}") String telemetryTopic) {
+        this.telemetryRepository = telemetryRepository;
+        this.machineServiceClient = machineServiceClient;
+        this.domainValidationService = domainValidationService;
+        this.kafkaEventPublisherService = kafkaEventPublisherService;
+        this.outboxEventRepository = outboxEventRepository;
+        this.outboxPublisherService = outboxPublisherService;
+        this.objectMapper = objectMapper != null ? objectMapper : new ObjectMapper().findAndRegisterModules();
+        this.telemetryTopic = telemetryTopic;
+    }
 
     public TelemetryService(
             TelemetryRepository telemetryRepository,
             MachineServiceClient machineServiceClient,
             DomainValidationService domainValidationService,
             KafkaEventPublisherService kafkaEventPublisherService) {
-        this.telemetryRepository = telemetryRepository;
-        this.machineServiceClient = machineServiceClient;
-        this.domainValidationService = domainValidationService;
-        this.kafkaEventPublisherService = kafkaEventPublisherService;
+        this(telemetryRepository, machineServiceClient, domainValidationService, kafkaEventPublisherService, null, null, null, "kynexis.machine-telemetry");
     }
 
     @Transactional
@@ -67,7 +99,59 @@ public class TelemetryService {
         Telemetry saved = telemetryRepository.save(telemetry);
         log.info("Telemetry saved successfully id={} machineId={}", saved.getId(), saved.getMachineId());
 
-        if (kafkaEventPublisherService != null) {
+        // Transactional Outbox: persist event to outbox in same DB transaction
+        if (outboxEventRepository != null && outboxPublisherService != null) {
+            String eventId = UUID.randomUUID().toString();
+            String correlationId = MDC.get(LoggingConstants.CORRELATION_ID_MDC_KEY);
+            if (correlationId == null || correlationId.isBlank()) {
+                correlationId = UUID.randomUUID().toString();
+            }
+
+            MachineTelemetryRecorded event = MachineTelemetryRecorded.builder()
+                    .eventId(eventId)
+                    .eventType(MachineTelemetryRecorded.EVENT_TYPE)
+                    .schemaVersion(MachineTelemetryRecorded.SCHEMA_VERSION)
+                    .timestamp(LocalDateTime.now())
+                    .machineId(saved.getMachineId())
+                    .telemetryId(saved.getId())
+                    .temperature(saved.getTemperature())
+                    .vibration(saved.getVibration())
+                    .pressure(saved.getPressure())
+                    .rpm(saved.getRpm())
+                    .telemetryTimestamp(saved.getTimestamp())
+                    .correlationId(correlationId)
+                    .build();
+
+            try {
+                String payload = objectMapper.writeValueAsString(event);
+                OutboxEvent outboxEvent = OutboxEvent.builder()
+                        .eventId(eventId)
+                        .eventType(MachineTelemetryRecorded.EVENT_TYPE)
+                        .topic(telemetryTopic)
+                        .partitionKey(String.valueOf(saved.getMachineId()))
+                        .payload(payload)
+                        .status(OutboxStatus.PENDING)
+                        .retryCount(0)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                OutboxEvent savedOutbox = outboxEventRepository.save(outboxEvent);
+
+                if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                    TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            outboxPublisherService.publishImmediately(savedOutbox.getId());
+                        }
+                    });
+                } else {
+                    outboxPublisherService.publishImmediately(savedOutbox.getId());
+                }
+            } catch (Exception ex) {
+                log.error("Failed to persist outbox event: {}", ex.getMessage(), ex);
+                throw new RuntimeException("Failed to persist transactional outbox event", ex);
+            }
+        } else if (kafkaEventPublisherService != null) {
             kafkaEventPublisherService.publishTelemetryRecorded(saved);
         }
 
