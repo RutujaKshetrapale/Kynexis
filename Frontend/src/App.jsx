@@ -3,6 +3,7 @@ import { useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
 import LoadingSpinner from './components/LoadingSpinner';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Views
 import LoginView from './views/LoginView';
@@ -20,6 +21,8 @@ import ProfileView from './views/ProfileView';
 export default function App() {
   const { isAuthenticated, loading } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [selectedPlant, setSelectedPlant] = useState('ALL');
 
   if (loading) {
     return (
@@ -36,11 +39,11 @@ export default function App() {
   const renderActiveView = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardView onNavigate={setActiveTab} />;
+        return <DashboardView onNavigate={setActiveTab} selectedPlant={selectedPlant} />;
       case 'plants':
         return <PlantsView />;
       case 'machines':
-        return <MachinesView />;
+        return <MachinesView selectedPlant={selectedPlant} />;
       case 'sensors':
         return <SensorsView />;
       case 'telemetry':
@@ -56,16 +59,29 @@ export default function App() {
       case 'profile':
         return <ProfileView />;
       default:
-        return <DashboardView onNavigate={setActiveTab} />;
+        return <DashboardView onNavigate={setActiveTab} selectedPlant={selectedPlant} />;
     }
   };
 
   return (
     <div className="app-container">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-      <div className="main-content">
-        <Navbar />
-        <main>{renderActiveView()}</main>
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        collapsed={sidebarCollapsed}
+        setCollapsed={setSidebarCollapsed}
+      />
+      <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+        <Navbar 
+          selectedPlant={selectedPlant} 
+          setSelectedPlant={setSelectedPlant} 
+          activeTab={activeTab} 
+        />
+        <main>
+          <ErrorBoundary key={activeTab}>
+            {renderActiveView()}
+          </ErrorBoundary>
+        </main>
       </div>
     </div>
   );

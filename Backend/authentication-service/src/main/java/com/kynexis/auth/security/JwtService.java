@@ -7,6 +7,7 @@ import java.util.List;
 
 import javax.crypto.SecretKey;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +28,7 @@ public class JwtService {
     private final String issuer;
     private final String audience;
 
+    @Autowired
     public JwtService(
             @Value("${jwt.secret:" + DEFAULT_DEV_SECRET + "}") String secret,
             @Value("${jwt.expiration:86400000}") long expiration,

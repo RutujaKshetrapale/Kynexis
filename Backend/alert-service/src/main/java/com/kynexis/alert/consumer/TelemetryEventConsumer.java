@@ -20,6 +20,7 @@ public class TelemetryEventConsumer {
     private final AlertEngineService alertEngineService;
     private final ProcessedEventRepository processedEventRepository;
 
+    @Autowired
     public TelemetryEventConsumer(
             AlertEngineService alertEngineService,
             @Autowired(required = false) ProcessedEventRepository processedEventRepository) {

@@ -1,326 +1,271 @@
 import React, { useState, useEffect } from 'react';
 import { maintenanceApi, machinesApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import { 
-  Wrench, 
-  Plus, 
-  Calendar, 
-  UserCheck, 
-  CheckCircle, 
-  Sparkles, 
-  Cpu, 
-  Edit2, 
-  Trash2 
+  Plus
 } from 'lucide-react';
 
 export default function MaintenanceView() {
-  const { hasRole } = useAuth();
-  const [maintenance, setMaintenance] = useState([]);
+  const [activeTab, setActiveTab] = useState('ALL'); // 'ALL' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED'
+  const [maintenanceList, setMaintenanceList] = useState([]);
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('ALL');
-
-  // Create / Edit Modal State
+  const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState(null);
-  const [formData, setFormData] = useState({
-    machineId: '1',
-    type: 'PREVENTIVE',
-    description: '',
-    scheduledDate: new Date().toISOString().slice(0, 10),
-    status: 'SCHEDULED',
-    technician: 'Robert Vance'
+  const [formData, setFormData] = useState({ 
+    machineId: 1, 
+    type: 'PREVENTIVE', 
+    description: '', 
+    scheduledDate: new Date().toISOString().slice(0, 10), 
+    cost: 150.0 
   });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
-  const fetchData = async () => {
+  const fetchMaintenance = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const [maintList, machList] = await Promise.all([
+      const [maintData, machData] = await Promise.all([
         maintenanceApi.getAll(),
         machinesApi.getAll()
       ]);
-      setMaintenance(Array.isArray(maintList) ? maintList : []);
-      setMachines(machList || []);
+      setMaintenanceList(Array.isArray(maintData) ? maintData : []);
+      setMachines(Array.isArray(machData) ? machData : []);
     } catch (err) {
-      console.error('Failed to load maintenance records:', err);
+      console.warn('Maintenance fetch error:', err);
+      setError(err.message || 'Failed to query maintenance records from database');
+      setMaintenanceList([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchMaintenance();
   }, []);
 
-  const handleOpenCreate = () => {
-    setEditingItem(null);
-    setFormData({
-      machineId: machines[0]?.id ? String(machines[0].id) : '1',
-      type: 'PREVENTIVE',
-      description: '',
-      scheduledDate: new Date().toISOString().slice(0, 10),
-      status: 'SCHEDULED',
-      technician: 'Sarah Jenkins'
-    });
-    setError('');
-    setModalOpen(true);
-  };
-
-  const handleOpenEdit = (item) => {
-    setEditingItem(item);
-    setFormData({
-      machineId: String(item.machineId),
-      type: item.type,
-      description: item.description,
-      scheduledDate: item.scheduledDate || new Date().toISOString().slice(0, 10),
-      status: item.status,
-      technician: item.technician
-    });
-    setError('');
-    setModalOpen(true);
-  };
-
-  const handleMarkComplete = async (item) => {
-    try {
-      await maintenanceApi.update(item.id, {
-        ...item,
-        status: 'COMPLETED',
-        completedDate: new Date().toISOString().slice(0, 10)
-      });
-      await fetchData();
-    } catch (err) {
-      alert(`Update failed: ${err.message}`);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm(`Delete Work Order #${id}? Admin privileges required.`)) return;
-    try {
-      await maintenanceApi.delete(id);
-      await fetchData();
-    } catch (err) {
-      alert(`Deletion failed: ${err.message}`);
-    }
-  };
-
-  const handleSave = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (!formData.description.trim() || !formData.technician.trim()) {
-      setError('Description and technician name are required.');
-      return;
-    }
-
     setSaving(true);
-    setError('');
     try {
-      const payload = {
-        machineId: Number(formData.machineId),
-        type: formData.type,
-        description: formData.description,
-        scheduledDate: formData.scheduledDate,
-        status: formData.status,
-        technician: formData.technician,
-        completedDate: formData.status === 'COMPLETED' ? new Date().toISOString().slice(0, 10) : null
-      };
-
-      if (editingItem) {
-        await maintenanceApi.update(editingItem.id, payload);
-      } else {
-        await maintenanceApi.create(payload);
-      }
+      await maintenanceApi.create(formData);
       setModalOpen(false);
-      await fetchData();
+      await fetchMaintenance();
     } catch (err) {
-      setError(err.message || 'Operation failed.');
+      setError(err.message || 'Failed to create maintenance work order');
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredMaintenance = maintenance.filter((m) => {
-    if (statusFilter !== 'ALL') {
-      return (m.status || '').toUpperCase() === statusFilter.toUpperCase();
+  const handleStatusChange = async (order, nextStatus) => {
+    try {
+      await maintenanceApi.update(order.id, {
+        ...order,
+        status: nextStatus
+      });
+      await fetchMaintenance();
+    } catch (err) {
+      setError(err.message || 'Failed to update work order status');
     }
+  };
+
+  const getMachineName = (id) => {
+    const found = machines.find(m => Number(m.id) === Number(id));
+    return found ? found.name : `Machine #${id}`;
+  };
+
+  const scheduledCount = maintenanceList.filter(m => (m.status || '').toUpperCase() === 'SCHEDULED' || (m.status || '').toUpperCase() === 'OPEN').length;
+  const inProgressCount = maintenanceList.filter(m => (m.status || '').toUpperCase() === 'IN_PROGRESS').length;
+  const completedCount = maintenanceList.filter(m => (m.status || '').toUpperCase() === 'COMPLETED').length;
+
+  const filtered = maintenanceList.filter(m => {
+    const s = (m.status || '').toUpperCase();
+    if (activeTab === 'SCHEDULED') return s === 'SCHEDULED' || s === 'OPEN';
+    if (activeTab === 'IN_PROGRESS') return s === 'IN_PROGRESS';
+    if (activeTab === 'COMPLETED') return s === 'COMPLETED';
     return true;
   });
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Wrench style={{ color: 'var(--neon-purple)' }} />
-            Preventive Maintenance & Work Orders
-          </h1>
-          <p className="page-description">
-            Predictive servicing schedules, AI-driven wear assessments, and technician work logs
-          </p>
-        </div>
-        {hasRole(['ADMIN', 'ENGINEER']) && (
-          <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
-            <Plus size={16} />
-            Schedule Work Order
+      {/* Error Alert */}
+      {error && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '10px 14px',
+          borderRadius: 'var(--radius-sm)',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          color: '#EF4444',
+          fontSize: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={fetchMaintenance}
+            style={{
+              background: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 600
+            }}
+          >
+            Retry
           </button>
-        )}
-      </div>
-
-      {/* AI Predictive Insight Banner */}
-      <div style={{
-        padding: '1.25rem 1.5rem',
-        borderRadius: 'var(--radius-lg)',
-        background: 'linear-gradient(90deg, rgba(168, 85, 247, 0.15) 0%, rgba(0, 242, 254, 0.08) 100%)',
-        border: '1px solid rgba(168, 85, 247, 0.3)',
-        marginBottom: '1.75rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: '1rem',
-        flexWrap: 'wrap'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div style={{
-            width: 42,
-            height: 42,
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(168, 85, 247, 0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--neon-purple)'
-          }}>
-            <Sparkles size={22} />
-          </div>
-          <div>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#e9d5ff' }}>
-              Predictive AI Insight: CNC Milling Station Alpha (MCH-001)
-            </div>
-            <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginTop: '0.15rem' }}>
-              Model detected 24% elevated bearing friction following thermal spike. Replacement recommended within 12 operating hours.
-            </div>
-          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <span className="badge badge-high_risk">AI RISK: HIGH</span>
-        </div>
-      </div>
+      )}
 
-      {/* Status Filter Bar */}
-      <div className="filter-bar">
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {['ALL', 'SCHEDULED', 'IN_PROGRESS', 'COMPLETED'].map((s) => (
+      {/* Top Filter & Tab Bar */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+        {/* Status Tabs */}
+        <div style={{ display: 'inline-flex', background: 'var(--surface)', padding: '3px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', gap: '4px' }}>
+          {[
+            { id: 'ALL', label: `All Orders (${maintenanceList.length})` },
+            { id: 'SCHEDULED', label: `Scheduled (${scheduledCount})` },
+            { id: 'IN_PROGRESS', label: `In Progress (${inProgressCount})` },
+            { id: 'COMPLETED', label: `Completed (${completedCount})` },
+          ].map((tab) => (
             <button
-              key={s}
+              key={tab.id}
               type="button"
-              className={`btn btn-sm ${statusFilter === s ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setStatusFilter(s)}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '4px',
+                border: 'none',
+                background: activeTab === tab.id ? '#0066FF' : 'transparent',
+                color: activeTab === tab.id ? '#FFFFFF' : 'var(--text-secondary)',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
+              }}
             >
-              {s.replace('_', ' ')}
+              {tab.label}
             </button>
           ))}
         </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            setFormData({ machineId: machines[0]?.id || 1, type: 'PREVENTIVE', description: '', scheduledDate: new Date().toISOString().slice(0, 10), cost: 200.0 });
+            setModalOpen(true);
+          }}
+        >
+          <Plus size={14} />
+          <span>New Work Order</span>
+        </button>
       </div>
 
+      {/* Maintenance Orders Table */}
       {loading ? (
-        <LoadingSpinner message="Retrieving work orders from Maintenance Service (:8085)..." />
-      ) : filteredMaintenance.length === 0 ? (
+        <div style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingSpinner message="Querying Work Orders from Database..." />
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState
-          icon={Wrench}
-          title="No Work Orders Found"
-          description="No maintenance records match your active filter."
-          actionLabel={hasRole(['ADMIN', 'ENGINEER']) ? 'Schedule First Order' : undefined}
-          onAction={handleOpenCreate}
+          title="No Maintenance Orders"
+          description="No work orders match the selected criteria."
+          actionLabel="Create Work Order"
+          onAction={() => setModalOpen(true)}
         />
       ) : (
-        <div className="table-wrap">
-          <table className="industrial-table">
+        <div className="table-container">
+          <table className="kyn-table">
             <thead>
               <tr>
-                <th>Order ID</th>
-                <th>Target Asset</th>
-                <th>Maintenance Type</th>
-                <th>Task Description</th>
+                <th>Work Order ID</th>
+                <th>Target Machine</th>
+                <th>Type</th>
+                <th>Description</th>
                 <th>Scheduled Date</th>
-                <th>Assigned Field Tech</th>
-                <th>Work Status</th>
+                <th>Cost</th>
+                <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredMaintenance.map((item) => {
-                const machine = machines.find(m => m.id === item.machineId);
+              {filtered.map((item) => {
+                const s = (item.status || '').toUpperCase();
+                const isCompleted = s === 'COMPLETED';
+                const isInProgress = s === 'IN_PROGRESS';
+
                 return (
                   <tr key={item.id}>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--neon-purple)' }}>
-                      MNT-00{item.id}
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>
+                      {`#WO-${String(item.id).padStart(3, '0')}`}
+                    </td>
+                    <td style={{ color: '#FFFFFF', fontWeight: 500 }}>
+                      {getMachineName(item.machineId)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-                        <Cpu size={14} style={{ color: 'var(--neon-cyan)' }} />
-                        <span>{machine ? machine.name : `Machine #${item.machineId}`}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-idle" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                        {item.type}
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontFamily: 'var(--font-mono)',
+                        background: 'rgba(0, 102, 255, 0.1)',
+                        color: 'var(--accent)',
+                        border: '1px solid rgba(0, 102, 255, 0.25)'
+                      }}>
+                        {item.type || 'PREVENTIVE'}
                       </span>
                     </td>
-                    <td>
-                      <div style={{ fontSize: '0.85rem', maxWidth: 320, color: 'var(--text-primary)' }}>
-                        {item.description}
-                      </div>
+                    <td style={{ color: 'var(--text-secondary)', maxWidth: '240px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.description || 'Standard inspection & calibration'}
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                      {item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString() : 'Scheduled'}
+                    </td>
+                    <td style={{ color: '#10B981', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                      ${Number(item.cost || 0).toFixed(2)}
                     </td>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        <Calendar size={13} style={{ color: 'var(--neon-blue)' }} />
-                        {item.scheduledDate}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.85rem' }}>
-                        <UserCheck size={14} style={{ color: 'var(--neon-emerald)' }} />
-                        <span>{item.technician}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <StatusBadge status={item.status} />
+                      <span className={`badge ${isCompleted ? 'badge-online' : (isInProgress ? 'badge-maintenance' : '')}`} style={!isCompleted && !isInProgress ? { background: 'rgba(100, 116, 139, 0.12)', color: '#94A3B8', border: '1px solid rgba(100, 116, 139, 0.3)' } : {}}>
+                        <span className="badge-dot" style={!isCompleted && !isInProgress ? { background: '#94A3B8' } : {}} />
+                        <span>{isCompleted ? 'Completed' : (isInProgress ? 'In Progress' : 'Scheduled')}</span>
+                      </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                        {item.status !== 'COMPLETED' && hasRole(['ADMIN', 'ENGINEER']) && (
+                      <div style={{ display: 'inline-flex', gap: '6px' }}>
+                        {!isCompleted && !isInProgress && (
                           <button
                             type="button"
-                            className="btn btn-success btn-sm"
-                            onClick={() => handleMarkComplete(item)}
-                            title="Mark Work Order Completed"
+                            onClick={() => handleStatusChange(item, 'IN_PROGRESS')}
+                            className="btn btn-secondary"
+                            style={{ padding: '4px 8px', fontSize: '10.5px' }}
+                            title="Start Work Order"
                           >
-                            <CheckCircle size={14} />
-                            <span>Complete</span>
+                            Start
                           </button>
                         )}
-                        {hasRole(['ADMIN', 'ENGINEER']) && (
+                        {isInProgress && (
                           <button
                             type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => handleOpenEdit(item)}
-                            title="Edit Work Order"
+                            onClick={() => handleStatusChange(item, 'COMPLETED')}
+                            className="btn btn-primary"
+                            style={{ padding: '4px 10px', fontSize: '10.5px' }}
+                            title="Complete Work Order"
                           >
-                            <Edit2 size={14} />
+                            Complete
                           </button>
                         )}
-                        {hasRole('ADMIN') && (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDelete(item.id)}
-                            title="Delete Order (Admin Only)"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        {isCompleted && (
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            Archived
+                          </span>
                         )}
                       </div>
                     </td>
@@ -332,80 +277,41 @@ export default function MaintenanceView() {
         </div>
       )}
 
-      {/* Work Order Modal */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingItem ? `Edit Work Order: MNT-00${editingItem.id}` : 'Schedule New Maintenance Order'}
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingItem ? 'Update Order' : 'Schedule Order'}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSave}>
-          {error && (
-            <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.825rem', marginBottom: '1rem' }}>
-              {error}
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="maint-machine">Target Equipment</label>
-            <select
-              id="maint-machine"
-              className="form-select"
-              value={formData.machineId}
-              onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
-            >
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} (#{m.id})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid-cols-2" style={{ gap: '0.75rem' }}>
+      {/* Create Work Order Modal */}
+      {modalOpen && (
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title="Create Maintenance Work Order"
+        >
+          <form onSubmit={handleCreate}>
             <div className="form-group">
-              <label className="form-label" htmlFor="maint-type">Maintenance Protocol</label>
+              <label className="form-label">Target Equipment</label>
               <select
-                id="maint-type"
-                className="form-select"
+                className="form-input"
+                value={formData.machineId}
+                onChange={(e) => setFormData({ ...formData, machineId: Number(e.target.value) })}
+              >
+                {machines.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} (#{m.id})</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Maintenance Type</label>
+              <select
+                className="form-input"
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               >
-                <option value="PREVENTIVE">PREVENTIVE (Routine Service)</option>
-                <option value="CORRECTIVE">CORRECTIVE (Incident Repair)</option>
-                <option value="PREDICTIVE">PREDICTIVE (AI Flagged)</option>
+                <option value="PREVENTIVE">PREVENTIVE (Routine Maintenance)</option>
+                <option value="CORRECTIVE">CORRECTIVE (Repair & Fix)</option>
+                <option value="PREDICTIVE">PREDICTIVE (Condition-based)</option>
               </select>
             </div>
-
             <div className="form-group">
-              <label className="form-label" htmlFor="maint-status">Order Status</label>
-              <select
-                id="maint-status"
-                className="form-select"
-                value={formData.status}
-                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              >
-                <option value="SCHEDULED">SCHEDULED</option>
-                <option value="IN_PROGRESS">IN_PROGRESS</option>
-                <option value="COMPLETED">COMPLETED</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid-cols-2" style={{ gap: '0.75rem' }}>
-            <div className="form-group">
-              <label className="form-label" htmlFor="maint-date">Scheduled Service Date</label>
+              <label className="form-label">Scheduled Execution Date</label>
               <input
-                id="maint-date"
                 type="date"
                 className="form-input"
                 value={formData.scheduledDate}
@@ -413,34 +319,39 @@ export default function MaintenanceView() {
                 required
               />
             </div>
-
             <div className="form-group">
-              <label className="form-label" htmlFor="maint-tech">Assigned Certified Technician</label>
+              <label className="form-label">Estimated Cost ($ USD)</label>
               <input
-                id="maint-tech"
-                type="text"
+                type="number"
+                step="0.01"
                 className="form-input"
-                value={formData.technician}
-                onChange={(e) => setFormData({ ...formData, technician: e.target.value })}
-                placeholder="e.g. Sarah Jenkins"
+                value={formData.cost}
+                onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
                 required
               />
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="maint-desc">Service Instructions & Work Scope</label>
-            <textarea
-              id="maint-desc"
-              className="form-textarea"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="e.g. Quarterly hydraulic fluid change and valve seal check..."
-              required
-            />
-          </div>
-        </form>
-      </Modal>
+            <div className="form-group">
+              <label className="form-label">Scope Description</label>
+              <input
+                type="text"
+                className="form-input"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="e.g. Spindle bearing lubrication and thermal calibration"
+                required
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Creating...' : 'Issue Work Order'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -10,6 +10,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class TelemetryServiceApplication {
 
+    @org.springframework.context.annotation.Bean
+    public com.fasterxml.jackson.databind.ObjectMapper objectMapper() {
+        return new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+    }
+
     public static void main(String[] args) {
         SpringApplication.run(TelemetryServiceApplication.class, args);
     }

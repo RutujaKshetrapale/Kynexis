@@ -1,32 +1,43 @@
 import React, { useState, useEffect } from 'react';
 import { plantsApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import { Factory, Plus, Search, Edit2, Trash2, MapPin, CheckCircle, XCircle } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  Edit2, 
+  Trash2
+} from 'lucide-react';
+
+const PLANT_IMAGES = [
+  '/images/plant_campus_exterior.jpg',
+  '/images/smart_factory_hero.jpg',
+  '/images/cnc_machine_showcase.jpg',
+  '/images/plant_campus_exterior.jpg',
+  '/images/smart_factory_hero.jpg'
+];
 
 export default function PlantsView() {
-  const { hasRole } = useAuth();
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterActive, setFilterActive] = useState('ALL');
-
-  // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingPlant, setEditingPlant] = useState(null);
   const [formData, setFormData] = useState({ name: '', location: '', active: true });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
   const fetchPlants = async () => {
+    setLoading(true);
+    setError('');
     try {
       const data = await plantsApi.getAll();
-      setPlants(data || []);
+      setPlants(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Failed to load plants:', err);
+      console.warn('Plant fetch error:', err);
+      setError(err.message || 'Failed to load plants from database');
+      setPlants([]);
     } finally {
       setLoading(false);
     }
@@ -39,26 +50,12 @@ export default function PlantsView() {
   const handleOpenCreate = () => {
     setEditingPlant(null);
     setFormData({ name: '', location: '', active: true });
-    setError('');
-    setModalOpen(true);
-  };
-
-  const handleOpenEdit = (plant) => {
-    setEditingPlant(plant);
-    setFormData({ name: plant.name, location: plant.location, active: plant.active });
-    setError('');
     setModalOpen(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.location.trim()) {
-      setError('Both plant name and location are required.');
-      return;
-    }
-
     setSaving(true);
-    setError('');
     try {
       if (editingPlant) {
         await plantsApi.update(editingPlant.id, formData);
@@ -68,214 +65,208 @@ export default function PlantsView() {
       setModalOpen(false);
       await fetchPlants();
     } catch (err) {
-      setError(err.message || 'Operation failed.');
+      setError(err.message || 'Failed to save facility');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(`Are you sure you want to delete Plant #${id}? This action requires ADMIN privileges.`)) {
-      return;
-    }
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
     try {
       await plantsApi.delete(id);
       await fetchPlants();
     } catch (err) {
-      alert(`Deletion failed: ${err.message}`);
+      setError(err.message || 'Failed to delete facility');
     }
   };
 
-  const filteredPlants = plants.filter((p) => {
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          p.location.toLowerCase().includes(searchTerm.toLowerCase());
-    if (filterActive === 'ACTIVE') return matchesSearch && p.active;
-    if (filterActive === 'INACTIVE') return matchesSearch && !p.active;
-    return matchesSearch;
-  });
+  const filtered = plants.filter(p => 
+    p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.location && p.location.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Factory style={{ color: 'var(--neon-cyan)' }} />
-            Manufacturing Plants & Facilities
-          </h1>
-          <p className="page-description">
-            Global production network management, facility geolocation, and operational statuses
-          </p>
-        </div>
-        {hasRole(['ADMIN', 'ENGINEER']) && (
-          <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
-            <Plus size={16} />
-            Register New Plant
+      {/* Error Alert with Retry */}
+      {error && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '10px 14px',
+          borderRadius: 'var(--radius-sm)',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          color: '#EF4444',
+          fontSize: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={fetchPlants}
+            style={{
+              background: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 600
+            }}
+          >
+            Retry
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Filter and Search Bar */}
-      <div className="filter-bar">
-        <div className="search-input-wrap">
-          <Search size={16} className="search-icon" />
+      {/* Top Action Bar matching reference image */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
+        <div className="search-box">
+          <Search size={14} />
           <input
             type="text"
-            className="form-input"
-            placeholder="Search plant by name or location (e.g. Pune, Munich, Detroit)..."
+            placeholder="Search plants..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          {['ALL', 'ACTIVE', 'INACTIVE'].map((status) => (
-            <button
-              key={status}
-              type="button"
-              className={`btn btn-sm ${filterActive === status ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setFilterActive(status)}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleOpenCreate}
+        >
+          <Plus size={14} />
+          <span>Add Plant</span>
+        </button>
       </div>
 
       {loading ? (
-        <LoadingSpinner message="Retrieving manufacturing facilities from Plant Service (:8082)..." />
-      ) : filteredPlants.length === 0 ? (
-        <EmptyState 
-          icon={Factory}
-          title="No Manufacturing Plants Found"
-          description="No plants match your search criteria. Try modifying your search or register a new plant."
-          actionLabel={hasRole(['ADMIN', 'ENGINEER']) ? 'Register First Plant' : undefined}
+        <div style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingSpinner message="Querying Plant Facilities from Database..." />
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No Plant Facilities Found"
+          description={searchTerm ? `No facilities matched "${searchTerm}"` : "No plants registered in database."}
+          actionLabel="Add First Plant"
           onAction={handleOpenCreate}
         />
       ) : (
-        <div className="table-wrap">
-          <table className="industrial-table">
-            <thead>
-              <tr>
-                <th>Plant ID</th>
-                <th>Facility Name</th>
-                <th>Location / Hub</th>
-                <th>Status</th>
-                <th style={{ textAlign: 'right' }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPlants.map((plant) => (
-                <tr key={plant.id}>
-                  <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--neon-cyan)' }}>
-                    PLT-00{plant.id}
-                  </td>
-                  <td>
-                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{plant.name}</div>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
-                      <MapPin size={14} style={{ color: 'var(--neon-blue)', flexShrink: 0 }} />
-                      <span>{plant.location}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <StatusBadge status={plant.active ? 'ACTIVE' : 'INACTIVE'} />
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                      {hasRole(['ADMIN', 'ENGINEER']) && (
-                        <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          onClick={() => handleOpenEdit(plant)}
-                          title="Edit Plant"
-                        >
-                          <Edit2 size={14} />
-                        </button>
-                      )}
-                      {hasRole('ADMIN') && (
-                        <button
-                          type="button"
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDelete(plant.id)}
-                          title="Delete Plant (Admin Only)"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        /* Real Plant Cards Grid */
+        <div className="plants-grid">
+          {filtered.map((plant, idx) => (
+            <div key={plant.id} className="plant-card">
+              {/* Image Wrap */}
+              <div className="plant-card-img-wrap">
+                <img 
+                  src={PLANT_IMAGES[idx % PLANT_IMAGES.length]} 
+                  alt={plant.name} 
+                  className="plant-card-img" 
+                />
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 40%, rgba(14, 20, 30, 0.95) 100%)' }} />
+              </div>
+
+              {/* Body */}
+              <div className="plant-card-body">
+                <h3 className="plant-card-title">{plant.name}</h3>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                  {plant.location}
+                </div>
+
+                <div className="plant-card-metrics">
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Status: </span>
+                    <strong style={{ color: plant.active !== false ? '#10B981' : '#EF4444', fontFamily: 'var(--font-mono)' }}>
+                      {plant.active !== false ? 'Operational' : 'Offline'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span style={{ color: 'var(--text-muted)' }}>Facility ID: </span>
+                    <strong style={{ color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>#{plant.id}</strong>
+                  </div>
+                </div>
+
+                {/* Status Badge & Actions */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
+                  <span className={`badge ${plant.active !== false ? 'badge-online' : 'badge-maintenance'}`}>
+                    <span className="badge-dot" />
+                    <span>{plant.active !== false ? 'Online' : 'Offline'}</span>
+                  </span>
+
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPlant(plant);
+                        setFormData({ name: plant.name, location: plant.location, active: plant.active !== false });
+                        setModalOpen(true);
+                      }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}
+                      title="Edit Facility"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(plant.id, plant.name)}
+                      style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
+                      title="Delete Facility"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Plant Modal (Create / Edit) */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingPlant ? `Edit Plant: ${editingPlant.name}` : 'Register New Manufacturing Plant'}
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingPlant ? 'Update Plant' : 'Create Facility'}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSave}>
-          {error && (
-            <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.825rem', marginBottom: '1rem' }}>
-              {error}
+      {/* Create / Edit Modal */}
+      {modalOpen && (
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={editingPlant ? `Edit ${editingPlant.name}` : 'Add New Plant Facility'}
+        >
+          <form onSubmit={handleSave}>
+            <div className="form-group">
+              <label className="form-label">Plant Facility Name</label>
+              <input
+                type="text"
+                className="form-input"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Pune Manufacturing Plant"
+                required
+              />
             </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="plant-name">Plant / Facility Name</label>
-            <input
-              id="plant-name"
-              type="text"
-              className="form-input"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Pune Automotive Hub"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="plant-location">Location / Region</label>
-            <input
-              id="plant-location"
-              type="text"
-              className="form-input"
-              value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-              placeholder="e.g. Pune, Maharashtra, India"
-              required
-            />
-          </div>
-
-          <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
-            <div>
-              <div className="form-label">Operational Status</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Enable or disable live telemetry routing for this facility
-              </div>
+            <div className="form-group">
+              <label className="form-label">Geographical Location</label>
+              <input
+                type="text"
+                className="form-input"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                placeholder="City, State, Country"
+                required
+              />
             </div>
-            <input
-              type="checkbox"
-              style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--neon-cyan)' }}
-              checked={formData.active}
-              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-            />
-          </div>
-        </form>
-      </Modal>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Saving...' : editingPlant ? 'Update Facility' : 'Create Facility'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

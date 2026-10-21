@@ -45,6 +45,7 @@ public class TelemetryService {
     private final ObjectMapper objectMapper;
     private final String telemetryTopic;
 
+    @Autowired
     public TelemetryService(
             TelemetryRepository telemetryRepository,
             MachineServiceClient machineServiceClient,

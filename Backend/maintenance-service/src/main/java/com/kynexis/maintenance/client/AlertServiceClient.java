@@ -3,6 +3,7 @@ package com.kynexis.maintenance.client;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -22,6 +23,7 @@ public class AlertServiceClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public AlertServiceClient(
             @Value("${kynexis.services.alert-service.url:http://localhost:8084}") String serviceUrl,
             @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {

@@ -1,14 +1,15 @@
 // KYNEXIS Authentication Context & State Management
+// Integrates with real Backend Authentication Service (:8081 via Gateway :8080)
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { authApi } from '../services/api';
 
 const AuthContext = createContext(null);
 
 export const SEED_USERS = [
-  { username: 'admin', role: 'ADMIN', label: 'System Admin', desc: 'Full System & Deletion Rights' },
-  { username: 'engineer_sarah', role: 'ENGINEER', label: 'Lead Engineer', desc: 'Plant/Machine/Telemetry Ops' },
-  { username: 'operator_john', role: 'OPERATOR', label: 'Floor Operator', desc: 'Telemetry Feeds & Viewing' },
-  { username: 'manager_alex', role: 'MANAGER', label: 'Plant Manager', desc: 'Audits & KPI Dashboards' }
+  { username: 'admin', password: 'Admin@123', role: 'ADMIN', label: 'System Admin', desc: 'Full System & Deletion Rights' },
+  { username: 'engineer', password: 'engineer123', role: 'ENGINEER', label: 'Lead Engineer', desc: 'Plant/Machine/Telemetry Ops' },
+  { username: 'operator', password: 'operator123', role: 'OPERATOR', label: 'Floor Operator', desc: 'Telemetry Feeds & Viewing' },
+  { username: 'manager', password: 'Manager@123', role: 'MANAGER', label: 'Plant Manager', desc: 'Audits & KPI Dashboards' }
 ];
 
 export function AuthProvider({ children }) {
@@ -16,28 +17,37 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Rehydrate session from localStorage
-    try {
-      const savedUser = localStorage.getItem('kynexis_user');
-      const savedToken = localStorage.getItem('kynexis_token');
-      if (savedUser && savedToken) {
-        setUser(JSON.parse(savedUser));
-      } else {
-        // Auto-login as admin by default for smooth smart factory dashboard development
-        const defaultAdmin = {
-          username: 'admin',
-          role: 'ADMIN',
-          token: 'kynexis-default-jwt-token'
-        };
-        localStorage.setItem('kynexis_user', JSON.stringify(defaultAdmin));
-        localStorage.setItem('kynexis_token', defaultAdmin.token);
-        setUser(defaultAdmin);
+    // Rehydrate session from localStorage or perform real initial login
+    async function initSession() {
+      try {
+        const savedUserStr = localStorage.getItem('kynexis_user');
+        const savedToken = localStorage.getItem('kynexis_token');
+
+        // Verify token is genuine (valid JWT has 3 base64 parts starting with ey)
+        const isGenuineJwt = savedToken && savedToken.startsWith('ey') && savedToken.split('.').length === 3;
+
+        if (savedUserStr && isGenuineJwt) {
+          setUser(JSON.parse(savedUserStr));
+        } else {
+          // Perform real automated login with root admin credentials
+          const res = await authApi.login({ username: 'admin', password: 'Admin@123' });
+          const adminUser = {
+            username: res.username || 'admin',
+            role: res.role || 'ADMIN',
+            token: res.token
+          };
+          localStorage.setItem('kynexis_user', JSON.stringify(adminUser));
+          localStorage.setItem('kynexis_token', adminUser.token);
+          setUser(adminUser);
+        }
+      } catch (e) {
+        console.error('Session initialization error:', e);
+      } finally {
+        setLoading(false);
       }
-    } catch (e) {
-      console.error('Failed to load session:', e);
-    } finally {
-      setLoading(false);
     }
+
+    initSession();
   }, []);
 
   const login = async (username, password) => {
@@ -68,20 +78,17 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const switchDemoUser = (roleOrUsername) => {
+  const switchDemoUser = async (roleOrUsername) => {
     const found = SEED_USERS.find(
       u => u.role.toLowerCase() === roleOrUsername.toLowerCase() ||
            u.username.toLowerCase() === roleOrUsername.toLowerCase()
     ) || SEED_USERS[0];
 
-    const userData = {
-      username: found.username,
-      role: found.role,
-      token: `token-${found.role.toLowerCase()}-${Date.now()}`
-    };
-    localStorage.setItem('kynexis_token', userData.token);
-    localStorage.setItem('kynexis_user', JSON.stringify(userData));
-    setUser(userData);
+    try {
+      await login(found.username, found.password);
+    } catch (e) {
+      console.warn('Switch persona error:', e);
+    }
   };
 
   const hasRole = (allowedRoles) => {

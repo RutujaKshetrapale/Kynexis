@@ -1,5 +1,6 @@
 package com.kynexis.sensor.client;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -14,6 +15,7 @@ public class MachineServiceClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public MachineServiceClient(
             @Value("${kynexis.services.machine-service.url:http://localhost:8088}") String serviceUrl,
             @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {
