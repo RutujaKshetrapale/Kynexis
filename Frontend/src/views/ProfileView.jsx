@@ -1,71 +1,82 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAuth, SEED_USERS } from '../context/AuthContext';
 import { 
   ShieldCheck, 
-  Server, 
-  Database, 
   User, 
-  Network 
+  Database, 
+  Server, 
+  Layers, 
+  CheckCircle2, 
+  Network, 
+  HardDrive
 } from 'lucide-react';
-
-export const MICROSERVICES = [
-  { name: 'api-gateway', port: 8080, route: '/api/dashboard/**', desc: 'Gateway proxy, JWT filter, dashboard aggregation' },
-  { name: 'authentication-service', port: 8081, route: '/api/auth/**', desc: 'User registration, BCrypt, JWT generation' },
-  { name: 'plant-service', port: 8082, route: '/api/plants/**', desc: 'Multi-site manufacturing plant registry' },
-  { name: 'telemetry-service', port: 8083, route: '/api/telemetry/**', desc: 'IoT time-series streaming & threshold evaluation' },
-  { name: 'alert-service', port: 8084, route: '/api/alerts/**', desc: 'Incident triage & severity alerting engine' },
-  { name: 'maintenance-service', port: 8085, route: '/api/maintenance/**', desc: 'Work orders, health index & predictive AI' },
-  { name: 'production-service', port: 8086, route: '/api/production/**', desc: 'Batch production tracking & scrap calculations' },
-  { name: 'energy-service', port: 8087, route: '/api/energy/**', desc: 'Power meter logs (kWh) & ISO 50001 efficiency' },
-  { name: 'machine-service', port: 8088, route: '/api/machines/**', desc: 'Machine asset fleet & plant association' },
-  { name: 'sensor-service', port: 8089, route: '/api/sensors/**', desc: 'Sensor channels, metric types & physical units' },
-];
 
 export default function ProfileView() {
   const { user, switchDemoUser } = useAuth();
 
+  const MICROSERVICES = [
+    { name: 'API Gateway', port: 8080, route: '/api/*', desc: 'Edge routing, CORS, WebSocket bridge & aggregation controller', latency: '4ms' },
+    { name: 'Authentication Service', port: 8081, route: '/api/auth/*', desc: 'JWT generation, password hashing & user persistence', latency: '7ms' },
+    { name: 'Plant Service', port: 8082, route: '/api/plants/*', desc: 'Facility metadata, geographical locations & active state', latency: '6ms' },
+    { name: 'Telemetry Service', port: 8083, route: '/api/telemetry/*', desc: 'High-frequency thermal, vibration & RPM readings', latency: '8ms' },
+    { name: 'Alert Service', port: 8084, route: '/api/alerts/*', desc: 'Threshold breach evaluation & operational incident feed', latency: '5ms' },
+    { name: 'Maintenance Service', port: 8085, route: '/api/maintenance/*, /api/machine-health/*', desc: 'Preventive/corrective work orders & predictive wear scores', latency: '9ms' },
+    { name: 'Production Service', port: 8086, route: '/api/production/*', desc: 'Manufacturing batch run throughput & first-pass scrap yield', latency: '7ms' },
+    { name: 'Energy Service', port: 8087, route: '/api/energy/*', desc: 'Continuous kilowatt-hour load & sub-metered power metrics', latency: '6ms' },
+    { name: 'Machine Service', port: 8088, route: '/api/machines/*', desc: 'Fleet telemetry metadata, operational status & plant bindings', latency: '5ms' },
+    { name: 'Sensor Service', port: 8089, route: '/api/sensors/*', desc: 'Sensor catalog, engineering units & hardware pairing', latency: '6ms' },
+  ];
+
+  const [selectedService, setSelectedService] = useState(MICROSERVICES[0]);
+
   return (
-    <div className="page-container">
+    <div className="page-container" style={{ paddingBottom: '3rem' }}>
+      {/* Page Header */}
       <div className="page-header">
-        <div>
+        <div className="page-title-wrap">
+          <div className="page-breadcrumbs">
+            <span>System</span>
+            <span>/</span>
+            <span className="active">Architecture & Security</span>
+          </div>
           <h1 className="page-title">
-            <ShieldCheck style={{ color: 'var(--neon-emerald)' }} />
-            System Architecture, Gateway & Session Security
+            <ShieldCheck size={22} style={{ color: 'var(--accent)' }} />
+            Architecture, RBAC & Mesh Security
           </h1>
           <p className="page-description">
-            10-microservice topology breakdown, API Gateway routing matrix, and authenticated RBAC role permissions
+            Inspect the 10-microservice Spring Boot topology, signed JWT session details, and shared MySQL database architecture.
           </p>
         </div>
       </div>
 
       {/* Grid: Current User Profile + DB Architecture */}
-      <div className="grid-cols-2" style={{ marginBottom: '2rem' }}>
+      <div className="grid-cols-2" style={{ marginBottom: '1.5rem' }}>
         {/* User Card */}
-        <div className="card">
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <User size={18} style={{ color: 'var(--neon-cyan)' }} />
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <User size={18} style={{ color: 'var(--accent)' }} />
             Active Session Security Profile
           </h2>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', marginBottom: '1.25rem' }}>
             <div style={{
-              width: 58,
-              height: 58,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #00f2fe 0%, #a855f7 100%)',
+              width: 52,
+              height: 52,
+              borderRadius: 'var(--radius-md)',
+              background: 'var(--surface-elevated)',
+              border: '1px solid var(--border)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#06080e',
+              color: 'var(--accent)',
               fontWeight: 800,
-              fontSize: '1.5rem',
-              boxShadow: '0 0 20px rgba(0, 242, 254, 0.4)'
+              fontSize: '1.35rem'
             }}>
               {user?.username?.charAt(0).toUpperCase()}
             </div>
             <div>
-              <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{user?.username}</div>
-              <div style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{user?.username}</div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                 {user?.username}@kynexis.industrial.com
               </div>
               <div style={{ marginTop: '0.35rem' }}>
@@ -75,35 +86,36 @@ export default function ProfileView() {
           </div>
 
           <div style={{
-            padding: '1rem',
-            borderRadius: 'var(--radius-md)',
-            background: 'rgba(255, 255, 255, 0.02)',
-            border: '1px solid var(--border-subtle)',
-            fontSize: '0.825rem',
+            padding: '0.85rem 1rem',
+            borderRadius: 'var(--radius-sm)',
+            background: 'var(--surface-elevated)',
+            border: '1px solid var(--border)',
+            fontSize: '0.8rem',
             display: 'flex',
             flexDirection: 'column',
-            gap: '0.65rem'
+            gap: '0.5rem',
+            marginBottom: '1.25rem'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Authentication Standard:</span>
-              <strong style={{ color: 'var(--text-primary)' }}>HMAC-SHA256 JWT Token</strong>
+              <span style={{ color: 'var(--text-muted)' }}>Authentication Standard:</span>
+              <strong style={{ color: 'var(--text-primary)' }}>HMAC-SHA256 Signed JWT</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Gateway Token Injection:</span>
-              <strong style={{ color: 'var(--neon-emerald)' }}>Authorization: Bearer [Header]</strong>
+              <span style={{ color: 'var(--text-muted)' }}>Gateway Header Propagation:</span>
+              <strong style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)' }}>Authorization: Bearer</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Internal Service Secret:</span>
-              <strong style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--neon-cyan)' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Internal Microservice Secret:</span>
+              <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>
                 X-Internal-Secret (Verified)
               </strong>
             </div>
           </div>
 
-          {/* Quick Persona Switcher in Card */}
-          <div style={{ marginTop: '1.25rem' }}>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.5rem' }}>
-              Switch Persona to Test RBAC Endpoints
+          {/* Quick Persona Switcher */}
+          <div>
+            <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.5rem' }}>
+              Switch Persona to Test RBAC Permissions
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem' }}>
               {SEED_USERS.map((seed) => {
@@ -112,8 +124,9 @@ export default function ProfileView() {
                   <button
                     key={seed.role}
                     type="button"
-                    className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-ghost'}`}
+                    className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline'}`}
                     onClick={() => switchDemoUser(seed.role)}
+                    style={{ justifyContent: 'center' }}
                   >
                     {seed.label} ({seed.role})
                   </button>
@@ -123,111 +136,136 @@ export default function ProfileView() {
           </div>
         </div>
 
-        {/* Database & Resiliency Card */}
-        <div className="card">
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Database size={18} style={{ color: 'var(--neon-blue)' }} />
+        {/* Database & Schema Resiliency Card */}
+        <div className="card" style={{ padding: '1.5rem' }}>
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Database size={18} style={{ color: 'var(--accent)' }} />
             Database & Idempotent Schema Architecture
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.825rem' }}>
             <div style={{
               padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(0, 242, 254, 0.05)',
-              border: '1px solid rgba(0, 242, 254, 0.2)'
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--surface-elevated)',
+              border: '1px solid var(--border)'
             }}>
-              <div style={{ fontWeight: 600, color: 'var(--neon-cyan)', marginBottom: '0.2rem' }}>
-                Single Centralized MySQL Database: smart_factory_db
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <HardDrive size={15} style={{ color: 'var(--accent)' }} />
+                <span>Single MySQL Database: smart_factory_db</span>
               </div>
-              <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-                All 10 Spring Boot microservices bind to <code className="mono">smart_factory_db</code> with standard <code className="mono">SPRING_DATASOURCE_*</code> environment variables.
+              <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                All 10 Spring Boot microservices bind to <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>smart_factory_db</code> with standard <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>SPRING_DATASOURCE_*</code> environment configuration.
               </div>
             </div>
 
             <div style={{
               padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(16, 185, 129, 0.05)',
-              border: '1px solid rgba(16, 185, 129, 0.2)'
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--surface-elevated)',
+              border: '1px solid var(--border)'
             }}>
-              <div style={{ fontWeight: 600, color: '#34d399', marginBottom: '0.2rem' }}>
-                Safe Non-Destructive Migrations
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <CheckCircle2 size={15} style={{ color: 'var(--success)' }} />
+                <span>Safe Non-Destructive DDL Migrations</span>
               </div>
-              <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-                <code className="mono">schema.sql</code> uses strictly <code className="mono">CREATE TABLE IF NOT EXISTS</code> across all 11 tables. Destructive resets isolated to <code className="mono">reset_dev_db.sql</code>.
+              <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>schema.sql</code> uses strictly <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>CREATE TABLE IF NOT EXISTS</code> across all 11 tables.
               </div>
             </div>
 
             <div style={{
               padding: '0.85rem 1rem',
-              borderRadius: 'var(--radius-md)',
-              background: 'rgba(168, 85, 247, 0.05)',
-              border: '1px solid rgba(168, 85, 247, 0.2)'
+              borderRadius: 'var(--radius-sm)',
+              background: 'var(--surface-elevated)',
+              border: '1px solid var(--border)'
             }}>
-              <div style={{ fontWeight: 600, color: '#c084fc', marginBottom: '0.2rem' }}>
-                Idempotent Seed Scripts
+              <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.2rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Layers size={15} style={{ color: 'var(--accent)' }} />
+                <span>Idempotent Database Seed Scripts</span>
               </div>
-              <div style={{ fontSize: '0.775rem', color: 'var(--text-secondary)' }}>
-                All seed records in <code className="mono">seed_data.sql</code> execute using safe <code className="mono">INSERT IGNORE INTO</code>, preventing duplicate key violations and data corruption.
+              <div style={{ fontSize: '0.775rem', color: 'var(--text-muted)' }}>
+                All records execute using <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--accent)' }}>INSERT IGNORE INTO</code>, preventing duplicate key violations.
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 10 Microservices Routing Matrix */}
-      <div className="card">
-        <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <Network size={18} style={{ color: 'var(--neon-cyan)' }} />
-          The 10 Independent Spring Boot Microservices
-        </h2>
+      {/* Interactive 10-Microservice Cluster Mesh */}
+      <div className="card" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: '1.25rem' }}>
+          <h2 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Network size={18} style={{ color: 'var(--accent)' }} />
+            10-Microservice Cluster Mesh & Endpoint Routing
+          </h2>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+            Click any microservice node below to inspect its Gateway routing proxy rules and internal endpoints
+          </span>
+        </div>
 
-        <div className="table-wrap">
-          <table className="industrial-table">
-            <thead>
-              <tr>
-                <th>Service Name</th>
-                <th>Internal Port</th>
-                <th>Gateway Proxy Route</th>
-                <th>Core Responsibilities</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {MICROSERVICES.map((svc) => (
-                <tr key={svc.name}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                      <Server size={14} style={{ color: 'var(--neon-cyan)' }} />
-                      <span>{svc.name}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--neon-purple)' }}>
-                      :{svc.port}
-                    </span>
-                  </td>
-                  <td>
-                    <code className="mono" style={{ color: 'var(--neon-blue)', fontSize: '0.8rem' }}>
-                      {svc.route}
-                    </code>
-                  </td>
-                  <td>
-                    <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)' }}>
-                      {svc.desc}
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge badge-healthy">
-                      <span className="badge-dot" />
-                      HEALTHY
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Microservices Node Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          {MICROSERVICES.map((svc) => {
+            const isSel = selectedService.name === svc.name;
+            return (
+              <div
+                key={svc.name}
+                onClick={() => setSelectedService(svc)}
+                style={{
+                  padding: '0.85rem 1rem',
+                  borderRadius: 'var(--radius-sm)',
+                  background: isSel ? 'var(--surface-elevated)' : 'var(--background)',
+                  border: `1px solid ${isSel ? 'var(--accent)' : 'var(--border)'}`,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isSel ? '0 0 12px rgba(57, 132, 255, 0.2)' : 'none'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: '0.72rem', color: isSel ? 'var(--accent)' : 'var(--text-muted)', fontWeight: 700 }}>
+                    PORT :{svc.port}
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--success)', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                    {svc.latency}
+                  </span>
+                </div>
+                <div style={{ fontWeight: 600, fontSize: '0.85rem', color: isSel ? '#FFFFFF' : 'var(--text-primary)' }}>
+                  {svc.name}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Selected Microservice Detail Inspector */}
+        <div style={{
+          padding: '1.25rem',
+          background: 'var(--surface-elevated)',
+          borderRadius: 'var(--radius-sm)',
+          border: '1px solid var(--border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>
+              Inspected Microservice Architecture
+            </div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text-primary)', margin: '0.2rem 0' }}>
+              {selectedService.name} (Port {selectedService.port})
+            </h3>
+            <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', margin: 0 }}>
+              {selectedService.desc}
+            </p>
+          </div>
+
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem', background: 'var(--surface)', padding: '0.6rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--text-muted)' }}>Gateway Pattern: </span>
+            <strong style={{ color: 'var(--accent)' }}>{selectedService.route}</strong>
+          </div>
         </div>
       </div>
     </div>

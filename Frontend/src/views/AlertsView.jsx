@@ -1,247 +1,365 @@
 import React, { useState, useEffect } from 'react';
 import { alertsApi, machinesApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
 import { 
-  AlertTriangle, 
-  Plus, 
-  CheckCircle, 
-  Trash2, 
-  Filter, 
-  Clock, 
-  Cpu 
+  Search, 
+  ChevronDown, 
+  Plus,
+  CheckCircle2,
+  AlertTriangle,
+  Check
 } from 'lucide-react';
 
 export default function AlertsView() {
-  const { hasRole } = useAuth();
   const [alerts, setAlerts] = useState([]);
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [severityFilter, setSeverityFilter] = useState('ALL');
-  const [unresolvedOnly, setUnresolvedOnly] = useState(false);
-
-  // Create Alarm Modal
-  const [modalOpen, setModalOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    machineId: '1',
-    type: 'OVERHEATING',
-    severity: 'HIGH',
-    message: ''
-  });
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [severityFilter, setSeverityFilter] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [showSeverityMenu, setShowSeverityMenu] = useState(false);
 
-  const fetchData = async () => {
+  // Modal State
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ machineId: 1, alertType: 'HIGH_TEMPERATURE', severity: 'WARNING', message: '' });
+  const [saving, setSaving] = useState(false);
+
+  const fetchAlerts = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const [alertList, machList] = await Promise.all([
+      const [alertData, machData] = await Promise.all([
         alertsApi.getAll(),
         machinesApi.getAll()
       ]);
-      setAlerts(Array.isArray(alertList) ? alertList : []);
-      setMachines(machList || []);
+      setAlerts(Array.isArray(alertData) ? alertData : []);
+      setMachines(Array.isArray(machData) ? machData : []);
     } catch (err) {
-      console.error('Failed to load alerts:', err);
+      console.warn('Alert fetch error:', err);
+      setError(err.message || 'Failed to load alerts from database');
+      setAlerts([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchAlerts();
   }, []);
 
-  const handleResolve = async (id) => {
-    try {
-      await alertsApi.resolve(id);
-      await fetchData();
-    } catch (err) {
-      alert(`Failed to resolve alert: ${err.message}`);
-    }
-  };
-
-  const handleDelete = async (id) => {
-    if (!window.confirm(`Delete Alert #${id}? Admin privileges required.`)) return;
-    try {
-      await alertsApi.delete(id);
-      await fetchData();
-    } catch (err) {
-      alert(`Deletion failed: ${err.message}`);
-    }
-  };
-
-  const handleSave = async (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    if (!formData.message.trim()) {
-      setError('Alert description message is required.');
-      return;
-    }
-
     setSaving(true);
-    setError('');
     try {
-      await alertsApi.create({
-        machineId: Number(formData.machineId),
-        type: formData.type,
-        severity: formData.severity,
-        message: formData.message,
-        resolved: false
-      });
+      await alertsApi.create(formData);
       setModalOpen(false);
-      await fetchData();
+      await fetchAlerts();
     } catch (err) {
-      setError(err.message || 'Failed to dispatch alarm.');
+      setError(err.message || 'Failed to trigger alert');
     } finally {
       setSaving(false);
     }
   };
 
-  const filteredAlerts = alerts.filter((a) => {
-    if (unresolvedOnly && a.resolved) return false;
-    if (severityFilter !== 'ALL') {
-      return (a.severity || '').toUpperCase() === severityFilter.toUpperCase();
+  const handleResolve = async (id) => {
+    try {
+      await alertsApi.resolve(id, 'Resolved by floor operator via control console');
+      await fetchAlerts();
+    } catch (err) {
+      setError(err.message || 'Failed to resolve alert');
     }
-    return true;
+  };
+
+  const handleAcknowledge = async (id) => {
+    try {
+      await alertsApi.acknowledge(id);
+      await fetchAlerts();
+    } catch (err) {
+      setError(err.message || 'Failed to acknowledge alert');
+    }
+  };
+
+  const getMachineName = (id) => {
+    const found = machines.find(m => Number(m.id) === Number(id));
+    return found ? found.name : `Machine #${id}`;
+  };
+
+  const filtered = alerts.filter(a => {
+    const msg = (a.message || `${a.alertType} on Machine #${a.machineId}`).toLowerCase();
+    const machName = getMachineName(a.machineId).toLowerCase();
+    const matchSearch = msg.includes(searchTerm.toLowerCase()) || machName.includes(searchTerm.toLowerCase()) || `#ALT-${a.id}`.includes(searchTerm);
+
+    let matchStatus = true;
+    if (statusFilter === 'OPEN') matchStatus = !a.resolved;
+    else if (statusFilter === 'RESOLVED') matchStatus = !!a.resolved;
+
+    let matchSeverity = true;
+    if (severityFilter !== 'ALL') {
+      matchSeverity = (a.severity || '').toUpperCase() === severityFilter.toUpperCase();
+    }
+
+    return matchSearch && matchStatus && matchSeverity;
   });
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <AlertTriangle style={{ color: 'var(--neon-crimson)' }} />
-            Active Industrial Alarms & Event Log
-          </h1>
-          <p className="page-description">
-            Real-time threshold violation incidents, anomaly warnings, and resolution audit log
-          </p>
-        </div>
-        {hasRole(['ADMIN', 'ENGINEER']) && (
-          <button 
-            type="button" 
-            className="btn btn-primary"
-            onClick={() => {
-              setFormData({ machineId: machines[0]?.id || '1', type: 'OVERHEATING', severity: 'HIGH', message: '' });
-              setError('');
-              setModalOpen(true);
+      {/* Error Alert */}
+      {error && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '10px 14px',
+          borderRadius: 'var(--radius-sm)',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          color: '#EF4444',
+          fontSize: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={fetchAlerts}
+            style={{
+              background: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 600
             }}
           >
-            <Plus size={16} />
-            Dispatch Alarm Event
+            Retry
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Filter and Unresolved Toggle */}
-      <div className="filter-bar">
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((s) => (
-            <button
-              key={s}
-              type="button"
-              className={`btn btn-sm ${severityFilter === s ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setSeverityFilter(s)}
-            >
-              {s}
-            </button>
-          ))}
+      {/* Top Filter Bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {/* Severity Filter */}
+        <div style={{ position: 'relative' }}>
+          <button 
+            type="button" 
+            className="filter-dropdown-btn"
+            onClick={() => { setShowSeverityMenu(!showSeverityMenu); setShowStatusMenu(false); }}
+          >
+            <span>Severity: {severityFilter}</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+
+          {showSeverityMenu && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              right: 0,
+              width: '160px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-dropdown)',
+              padding: '6px',
+              zIndex: 100
+            }}>
+              {['ALL', 'CRITICAL', 'WARNING', 'INFO'].map(sev => (
+                <button
+                  key={sev}
+                  type="button"
+                  onClick={() => { setSeverityFilter(sev); setShowSeverityMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    background: severityFilter === sev ? 'var(--surface-elevated)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '11.5px',
+                    color: severityFilter === sev ? '#FFFFFF' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Status Filter */}
+        <div style={{ position: 'relative' }}>
+          <button 
+            type="button" 
+            className="filter-dropdown-btn"
+            onClick={() => { setShowStatusMenu(!showStatusMenu); setShowSeverityMenu(false); }}
+          >
+            <span>Status: {statusFilter}</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+
+          {showStatusMenu && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              right: 0,
+              width: '160px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-dropdown)',
+              padding: '6px',
+              zIndex: 100
+            }}>
+              {['ALL', 'OPEN', 'RESOLVED'].map(st => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => { setStatusFilter(st); setShowStatusMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    background: statusFilter === st ? 'var(--surface-elevated)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '11.5px',
+                    color: statusFilter === st ? '#FFFFFF' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="search-box">
+          <Search size={14} />
+          <input
+            type="text"
+            placeholder="Search alerts..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
         <button
           type="button"
-          className={`btn btn-sm ${unresolvedOnly ? 'btn-danger' : 'btn-ghost'}`}
-          onClick={() => setUnresolvedOnly(!unresolvedOnly)}
+          className="btn btn-primary"
+          onClick={() => {
+            setFormData({ machineId: machines[0]?.id || 1, alertType: 'HIGH_TEMPERATURE', severity: 'WARNING', message: 'Abnormal thermal reading observed' });
+            setModalOpen(true);
+          }}
         >
-          <Filter size={14} />
-          {unresolvedOnly ? 'Showing Unresolved Only' : 'Show All Events'}
+          <Plus size={14} />
+          <span>Trigger Alert</span>
         </button>
       </div>
 
+      {/* Alerts Table */}
       {loading ? (
-        <LoadingSpinner message="Polling incident queue from Alert Service (:8084)..." />
-      ) : filteredAlerts.length === 0 ? (
+        <div style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingSpinner message="Querying Factory Alerts from Database..." />
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState
-          icon={AlertTriangle}
-          title="No Incident Events Found"
-          description="All telemetry thresholds are currently operating within safe tolerance parameters."
+          title="No Alerts Found"
+          description={searchTerm ? `No alerts match "${searchTerm}"` : "All factory machines operating nominal. Zero alerts logged."}
+          actionLabel="Simulate Alert"
+          onAction={() => setModalOpen(true)}
         />
       ) : (
-        <div className="table-wrap">
-          <table className="industrial-table">
+        <div className="table-container">
+          <table className="kyn-table">
             <thead>
               <tr>
-                <th>Alert ID</th>
-                <th>Target Asset</th>
-                <th>Event Type</th>
                 <th>Severity</th>
-                <th>Diagnostic Description</th>
-                <th>Event Time</th>
-                <th>Resolution State</th>
+                <th>Alert ID</th>
+                <th>Machine</th>
+                <th>Alert Event</th>
+                <th>Triggered At</th>
+                <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredAlerts.map((alert) => {
-                const machine = machines.find(m => m.id === alert.machineId);
+              {filtered.map((item) => {
+                const isCritical = item.severity === 'CRITICAL';
+                const isWarning = item.severity === 'WARNING';
+                const sevColor = isCritical ? '#EF4444' : (isWarning ? '#F59E0B' : '#0066FF');
+
                 return (
-                  <tr key={alert.id}>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--neon-crimson)' }}>
-                      ALT-00{alert.id}
-                    </td>
+                  <tr key={item.id}>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600 }}>
-                        <Cpu size={14} style={{ color: 'var(--neon-purple)' }} />
-                        <span>{machine ? machine.name : `Machine #${alert.machineId}`}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span className="badge badge-idle" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                        {alert.type}
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '3px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        background: `${sevColor}15`,
+                        color: sevColor,
+                        border: `1px solid ${sevColor}35`
+                      }}>
+                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sevColor }} />
+                        <span>{item.severity || 'WARNING'}</span>
                       </span>
                     </td>
-                    <td>
-                      <StatusBadge status={alert.severity} />
+                    <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>
+                      {`#ALT-${String(item.id).padStart(3, '0')}`}
+                    </td>
+                    <td style={{ color: '#FFFFFF', fontWeight: 500 }}>
+                      {getMachineName(item.machineId)}
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)' }}>
+                      {item.message || item.alertType}
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recent'}
                     </td>
                     <td>
-                      <div style={{ fontSize: '0.85rem', maxWidth: 360, color: 'var(--text-primary)' }}>
-                        {alert.message}
-                      </div>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: "'JetBrains Mono', monospace" }}>
-                        <Clock size={12} />
-                        {new Date(alert.createdAt).toLocaleString()}
-                      </div>
-                    </td>
-                    <td>
-                      <StatusBadge status={alert.resolved ? 'RESOLVED' : 'ACTIVE'} />
+                      <span className={`badge ${item.resolved ? 'badge-online' : 'badge-maintenance'}`}>
+                        <span className="badge-dot" />
+                        <span>{item.resolved ? 'Resolved' : (item.acknowledged ? 'Acknowledged' : 'Open')}</span>
+                      </span>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                        {!alert.resolved && hasRole(['ADMIN', 'ENGINEER']) && (
+                      {!item.resolved ? (
+                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                          {!item.acknowledged && (
+                            <button
+                              type="button"
+                              onClick={() => handleAcknowledge(item.id)}
+                              className="btn btn-secondary"
+                              style={{ padding: '4px 8px', fontSize: '10.5px' }}
+                              title="Acknowledge Alert"
+                            >
+                              Ack
+                            </button>
+                          )}
                           <button
                             type="button"
-                            className="btn btn-success btn-sm"
-                            onClick={() => handleResolve(alert.id)}
-                            title="Acknowledge and Resolve Alarm"
+                            onClick={() => handleResolve(item.id)}
+                            className="btn btn-primary"
+                            style={{ padding: '4px 10px', fontSize: '10.5px' }}
+                            title="Resolve Alert"
                           >
-                            <CheckCircle size={14} />
-                            <span>Resolve</span>
+                            Resolve
                           </button>
-                        )}
-                        {hasRole('ADMIN') && (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDelete(alert.id)}
-                            title="Delete Event (Admin Only)"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                          Completed
+                        </span>
+                      )}
                     </td>
                   </tr>
                 );
@@ -251,90 +369,73 @@ export default function AlertsView() {
         </div>
       )}
 
-      {/* Manual Alarm Modal */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title="Dispatch Alarm Event (POST /api/alerts)"
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Transmitting...' : 'Dispatch Alarm'}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSave}>
-          {error && (
-            <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.825rem', marginBottom: '1rem' }}>
-              {error}
-            </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="alert-machine">Target Equipment</label>
-            <select
-              id="alert-machine"
-              className="form-select"
-              value={formData.machineId}
-              onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
-            >
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} (#{m.id})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid-cols-2" style={{ gap: '0.75rem' }}>
+      {/* Trigger Alert Modal */}
+      {modalOpen && (
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title="Trigger Industrial Equipment Alert"
+        >
+          <form onSubmit={handleCreate}>
             <div className="form-group">
-              <label className="form-label" htmlFor="alert-type">Fault Type</label>
+              <label className="form-label">Affected Machine</label>
               <select
-                id="alert-type"
-                className="form-select"
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                className="form-input"
+                value={formData.machineId}
+                onChange={(e) => setFormData({ ...formData, machineId: Number(e.target.value) })}
               >
-                <option value="OVERHEATING">OVERHEATING</option>
-                <option value="VIBRATION_WARNING">VIBRATION WARNING</option>
-                <option value="PRESSURE_DROP">PRESSURE DROP</option>
-                <option value="BEARING_FAILURE">BEARING FAILURE</option>
+                {machines.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} (#{m.id})</option>
+                ))}
               </select>
             </div>
-
             <div className="form-group">
-              <label className="form-label" htmlFor="alert-sev">Severity Level</label>
+              <label className="form-label">Alert Severity</label>
               <select
-                id="alert-sev"
-                className="form-select"
+                className="form-input"
                 value={formData.severity}
                 onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
               >
-                <option value="CRITICAL">CRITICAL</option>
-                <option value="HIGH">HIGH</option>
-                <option value="MEDIUM">MEDIUM</option>
-                <option value="LOW">LOW</option>
+                <option value="CRITICAL">CRITICAL (Immediate Attention)</option>
+                <option value="WARNING">WARNING (Threshold Exceeded)</option>
+                <option value="INFO">INFO (Operational Notice)</option>
               </select>
             </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="alert-msg">Incident Message / Observation</label>
-            <textarea
-              id="alert-msg"
-              className="form-textarea"
-              value={formData.message}
-              onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-              placeholder="e.g. Spindle temperature exceeded 85°C safety threshold"
-              required
-            />
-          </div>
-        </form>
-      </Modal>
+            <div className="form-group">
+              <label className="form-label">Alert Type</label>
+              <select
+                className="form-input"
+                value={formData.alertType}
+                onChange={(e) => setFormData({ ...formData, alertType: e.target.value })}
+              >
+                <option value="HIGH_TEMPERATURE">HIGH_TEMPERATURE</option>
+                <option value="HIGH_VIBRATION">HIGH_VIBRATION</option>
+                <option value="LOW_PRESSURE">LOW_PRESSURE</option>
+                <option value="MOTOR_STALL">MOTOR_STALL</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Detailed Message</label>
+              <input
+                type="text"
+                className="form-input"
+                value={formData.message}
+                onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                placeholder="e.g. Temperature reached 89.4°C on CNC Spindle"
+                required
+              />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Triggering...' : 'Dispatch Alert'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

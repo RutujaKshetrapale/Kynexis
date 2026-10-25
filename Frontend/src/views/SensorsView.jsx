@@ -1,359 +1,444 @@
 import React, { useState, useEffect } from 'react';
 import { sensorsApi, machinesApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import StatusBadge from '../components/StatusBadge';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
-import { Radio, Plus, Search, Edit2, Trash2, Cpu } from 'lucide-react';
+import { 
+  Search, 
+  ChevronRight, 
+  ChevronDown,
+  Plus,
+  Edit2,
+  Trash2,
+  Activity
+} from 'lucide-react';
 
 export default function SensorsView() {
-  const { hasRole } = useAuth();
   const [sensors, setSensors] = useState([]);
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState('');
   const [typeFilter, setTypeFilter] = useState('ALL');
+  const [machineFilter, setMachineFilter] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
+  const [showMachineMenu, setShowMachineMenu] = useState(false);
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
   const [editingSensor, setEditingSensor] = useState(null);
-  const [formData, setFormData] = useState({ name: '', type: 'Temperature', unit: '°C', machineId: '', active: true });
+  const [formData, setFormData] = useState({ name: '', type: 'Temperature', unit: '°C', machineId: 1, active: true });
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
 
-  const fetchData = async () => {
+  const fetchSensors = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const [sensList, machList] = await Promise.all([
+      const [sensorData, machData] = await Promise.all([
         sensorsApi.getAll(),
         machinesApi.getAll()
       ]);
-      setSensors(sensList || []);
-      setMachines(machList || []);
+      setSensors(Array.isArray(sensorData) ? sensorData : []);
+      setMachines(Array.isArray(machData) ? machData : []);
     } catch (err) {
-      console.error('Failed to load sensor catalog:', err);
+      console.warn('Sensors fetch error:', err);
+      setError(err.message || 'Failed to load sensors from database');
+      setSensors([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchSensors();
   }, []);
 
   const handleOpenCreate = () => {
     setEditingSensor(null);
-    setFormData({
-      name: '',
-      type: 'Temperature',
-      unit: '°C',
-      machineId: machines.length > 0 ? String(machines[0].id) : '1',
-      active: true
-    });
-    setError('');
+    setFormData({ name: '', type: 'Temperature', unit: '°C', machineId: machines[0]?.id || 1, active: true });
     setModalOpen(true);
-  };
-
-  const handleOpenEdit = (sensor) => {
-    setEditingSensor(sensor);
-    setFormData({
-      name: sensor.name,
-      type: sensor.type,
-      unit: sensor.unit,
-      machineId: String(sensor.machineId),
-      active: sensor.active
-    });
-    setError('');
-    setModalOpen(true);
-  };
-
-  const handleTypeChange = (newType) => {
-    let unit = '°C';
-    if (newType === 'Vibration') unit = 'mm/s';
-    else if (newType === 'Pressure') unit = 'PSI';
-    else if (newType === 'RPM') unit = 'RPM';
-    setFormData({ ...formData, type: newType, unit });
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.machineId) {
-      setError('Sensor name and target machine are required.');
-      return;
-    }
-
     setSaving(true);
-    setError('');
     try {
-      const payload = {
-        name: formData.name,
-        type: formData.type,
-        unit: formData.unit,
-        machineId: Number(formData.machineId),
-        active: formData.active
-      };
-
       if (editingSensor) {
-        await sensorsApi.update(editingSensor.id, payload);
+        await sensorsApi.update(editingSensor.id, formData);
       } else {
-        await sensorsApi.create(payload);
+        await sensorsApi.create(formData);
       }
       setModalOpen(false);
-      await fetchData();
+      await fetchSensors();
     } catch (err) {
-      setError(err.message || 'Operation failed.');
+      setError(err.message || 'Failed to save sensor');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm(`Delete Sensor #${id}? Requires ADMIN privileges.`)) return;
+  const handleDelete = async (id, name) => {
+    if (!window.confirm(`Are you sure you want to delete sensor "${name}"?`)) return;
     try {
       await sensorsApi.delete(id);
-      await fetchData();
+      await fetchSensors();
     } catch (err) {
-      alert(`Deletion failed: ${err.message}`);
+      setError(err.message || 'Failed to delete sensor');
     }
   };
 
-  const filteredSensors = sensors.filter((s) => {
-    const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          s.type.toLowerCase().includes(searchTerm.toLowerCase());
-    if (typeFilter !== 'ALL') {
-      return matchesSearch && s.type.toLowerCase() === typeFilter.toLowerCase();
-    }
-    return matchesSearch;
+  const filtered = sensors.filter(s => {
+    const matchSearch = (s.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
+                        `#00${s.id}`.includes(searchTerm) ||
+                        (s.type || '').toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchType = typeFilter === 'ALL' || (s.type || '').toUpperCase() === typeFilter.toUpperCase();
+    const matchMachine = machineFilter === 'ALL' || String(s.machineId) === String(machineFilter);
+    return matchSearch && matchType && matchMachine;
   });
+
+  const getMachineName = (machineId) => {
+    const found = machines.find(m => Number(m.id) === Number(machineId));
+    return found ? found.name : `Machine #${machineId}`;
+  };
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Radio style={{ color: 'var(--neon-emerald)' }} />
-            IoT Sensor Catalog & Node Configuration
-          </h1>
-          <p className="page-description">
-            Configured telemetry endpoints, sensor metric types, hardware units, and machine associations
-          </p>
-        </div>
-        {hasRole(['ADMIN', 'ENGINEER']) && (
-          <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
-            <Plus size={16} />
-            Add Sensor Node
+      {/* Error Alert with Retry */}
+      {error && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '10px 14px',
+          borderRadius: 'var(--radius-sm)',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          color: '#EF4444',
+          fontSize: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={fetchSensors}
+            style={{
+              background: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 600
+            }}
+          >
+            Retry
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Filter and Search Bar */}
-      <div className="filter-bar">
-        <div className="search-input-wrap">
-          <Search size={16} className="search-icon" />
+      {/* Top Filter Bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {/* Machine Filter Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button 
+            type="button" 
+            className="filter-dropdown-btn"
+            onClick={() => { setShowMachineMenu(!showMachineMenu); setShowTypeMenu(false); }}
+          >
+            <span>{machineFilter === 'ALL' ? 'All Machines' : getMachineName(machineFilter)}</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+
+          {showMachineMenu && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              right: 0,
+              width: '210px',
+              maxHeight: '260px',
+              overflowY: 'auto',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-dropdown)',
+              padding: '6px',
+              zIndex: 100
+            }}>
+              <button
+                type="button"
+                onClick={() => { setMachineFilter('ALL'); setShowMachineMenu(false); }}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  background: machineFilter === 'ALL' ? 'var(--surface-elevated)' : 'transparent',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '11.5px',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                All Machines
+              </button>
+              {machines.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => { setMachineFilter(String(m.id)); setShowMachineMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    background: machineFilter === String(m.id) ? 'var(--surface-elevated)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '11.5px',
+                    color: machineFilter === String(m.id) ? '#FFFFFF' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Type Filter Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button 
+            type="button" 
+            className="filter-dropdown-btn"
+            onClick={() => { setShowTypeMenu(!showTypeMenu); setShowMachineMenu(false); }}
+          >
+            <span>Type: {typeFilter}</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+
+          {showTypeMenu && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              right: 0,
+              width: '160px',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-dropdown)',
+              padding: '6px',
+              zIndex: 100
+            }}>
+              {['ALL', 'TEMPERATURE', 'VIBRATION', 'PRESSURE', 'RPM'].map(tp => (
+                <button
+                  key={tp}
+                  type="button"
+                  onClick={() => { setTypeFilter(tp); setShowTypeMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    background: typeFilter === tp ? 'var(--surface-elevated)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '11.5px',
+                    color: typeFilter === tp ? '#FFFFFF' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {tp}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="search-box">
+          <Search size={14} />
           <input
             type="text"
-            className="form-input"
-            placeholder="Search sensor by name (e.g. Thermal, Vibration, Tachometer)..."
+            placeholder="Search sensors..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-          {['ALL', 'Temperature', 'Vibration', 'Pressure', 'RPM'].map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`btn btn-sm ${typeFilter.toLowerCase() === t.toLowerCase() ? 'btn-primary' : 'btn-ghost'}`}
-              onClick={() => setTypeFilter(t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={handleOpenCreate}
+        >
+          <Plus size={14} />
+          <span>Add Sensor</span>
+        </button>
       </div>
 
+      {/* Sensor Data Table */}
       {loading ? (
-        <LoadingSpinner message="Retrieving sensor catalog from Sensor Service (:8089)..." />
-      ) : filteredSensors.length === 0 ? (
+        <div style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingSpinner message="Querying Sensors from Database..." />
+        </div>
+      ) : filtered.length === 0 ? (
         <EmptyState
-          icon={Radio}
-          title="No IoT Sensors Configured"
-          description="No telemetry sensor nodes match your active filter."
-          actionLabel={hasRole(['ADMIN', 'ENGINEER']) ? 'Configure First Sensor' : undefined}
+          title="No Sensors Found"
+          description={searchTerm ? `No sensors matched "${searchTerm}"` : "No sensors registered in database."}
+          actionLabel="Add Sensor"
           onAction={handleOpenCreate}
         />
       ) : (
-        <div className="table-wrap">
-          <table className="industrial-table">
+        <div className="table-container">
+          <table className="kyn-table">
             <thead>
               <tr>
-                <th>Node ID</th>
-                <th>Sensor Label</th>
-                <th>Physical Metric</th>
+                <th>Sensor ID</th>
+                <th>Sensor Name</th>
+                <th>Monitored Machine</th>
+                <th>Type</th>
                 <th>Unit</th>
-                <th>Assigned Machine</th>
-                <th>Channel State</th>
+                <th>Telemetry Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredSensors.map((sensor) => {
-                const machine = machines.find(m => m.id === sensor.machineId);
-                return (
-                  <tr key={sensor.id}>
-                    <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--neon-emerald)' }}>
-                      SNS-00{sensor.id}
-                    </td>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{sensor.name}</div>
-                    </td>
-                    <td>
-                      <span className="badge badge-idle" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                        {sensor.type}
-                      </span>
-                    </td>
-                    <td>
-                      <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--neon-cyan)', fontWeight: 600 }}>
-                        {sensor.unit}
-                      </span>
-                    </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-secondary)' }}>
-                        <Cpu size={14} style={{ color: 'var(--neon-purple)' }} />
-                        <span>{machine ? machine.name : `Machine #${sensor.machineId}`}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <StatusBadge status={sensor.active ? 'ACTIVE' : 'INACTIVE'} />
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.5rem' }}>
-                        {hasRole(['ADMIN', 'ENGINEER']) && (
-                          <button
-                            type="button"
-                            className="btn btn-ghost btn-sm"
-                            onClick={() => handleOpenEdit(sensor)}
-                            title="Edit Sensor Configuration"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                        )}
-                        {hasRole('ADMIN') && (
-                          <button
-                            type="button"
-                            className="btn btn-danger btn-sm"
-                            onClick={() => handleDelete(sensor.id)}
-                            title="Delete Sensor (Admin Only)"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.map((s) => (
+                <tr key={s.id}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>
+                    {`#S-${String(s.id).padStart(3, '0')}`}
+                  </td>
+                  <td style={{ color: '#FFFFFF', fontWeight: 500 }}>
+                    {s.name}
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)' }}>
+                    {getMachineName(s.machineId)}
+                  </td>
+                  <td>
+                    <span style={{
+                      padding: '3px 8px',
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      fontFamily: 'var(--font-mono)',
+                      background: 'rgba(0, 102, 255, 0.1)',
+                      color: 'var(--accent)',
+                      border: '1px solid rgba(0, 102, 255, 0.25)'
+                    }}>
+                      {s.type}
+                    </span>
+                  </td>
+                  <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                    {s.unit}
+                  </td>
+                  <td>
+                    <span className={`badge ${s.active !== false ? 'badge-online' : 'badge-maintenance'}`}>
+                      <span className="badge-dot" />
+                      <span>{s.active !== false ? 'Online & Streaming' : 'Offline'}</span>
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <div style={{ display: 'inline-flex', gap: '8px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingSensor(s);
+                          setFormData({ name: s.name, type: s.type, unit: s.unit, machineId: s.machineId || 1, active: s.active !== false });
+                          setModalOpen(true);
+                        }}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 3 }}
+                        title="Edit Sensor"
+                      >
+                        <Edit2 size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(s.id, s.name)}
+                        style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 3 }}
+                        title="Delete Sensor"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Sensor Modal (Create / Edit) */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingSensor ? `Edit Sensor Node: ${editingSensor.name}` : 'Configure New IoT Sensor Node'}
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingSensor ? 'Update Sensor' : 'Register Sensor'}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSave}>
-          {error && (
-            <div style={{ padding: '0.75rem', borderRadius: 'var(--radius-md)', background: 'rgba(239,68,68,0.15)', color: '#f87171', fontSize: '0.825rem', marginBottom: '1rem' }}>
-              {error}
+      {/* Create / Edit Modal */}
+      {modalOpen && (
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title={editingSensor ? `Edit ${editingSensor.name}` : 'Register New Industrial Sensor'}
+        >
+          <form onSubmit={handleSave}>
+            <div className="form-group">
+              <label className="form-label">Sensor Name</label>
+              <input
+                type="text"
+                className="form-input"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g. Spindle Vibration Sensor"
+                required
+              />
             </div>
-          )}
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="sensor-name">Sensor Name / Tag</label>
-            <input
-              id="sensor-name"
-              type="text"
-              className="form-input"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="e.g. Spindle Thermal Sensor"
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="sensor-type">Metric Type</label>
-            <select
-              id="sensor-type"
-              className="form-select"
-              value={formData.type}
-              onChange={(e) => handleTypeChange(e.target.value)}
-            >
-              <option value="Temperature">Temperature (°C)</option>
-              <option value="Vibration">Vibration (mm/s)</option>
-              <option value="Pressure">Pressure (PSI)</option>
-              <option value="RPM">RPM (Rotations/min)</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="sensor-unit">Unit of Measure</label>
-            <input
-              id="sensor-unit"
-              type="text"
-              className="form-input"
-              value={formData.unit}
-              onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="sensor-machine">Assigned Machine</label>
-            <select
-              id="sensor-machine"
-              className="form-select"
-              value={formData.machineId}
-              onChange={(e) => setFormData({ ...formData, machineId: e.target.value })}
-              required
-            >
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} ({m.type})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
-            <div>
-              <div className="form-label">Active Channel</div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                Enable data ingestion for this sensor channel
-              </div>
+            <div className="form-group">
+              <label className="form-label">Sensor Type</label>
+              <select
+                className="form-input"
+                value={formData.type}
+                onChange={(e) => {
+                  const t = e.target.value;
+                  let u = '°C';
+                  if (t === 'Vibration') u = 'mm/s';
+                  else if (t === 'Pressure') u = 'bar';
+                  else if (t === 'RPM') u = 'RPM';
+                  setFormData({ ...formData, type: t, unit: u });
+                }}
+              >
+                <option value="Temperature">Temperature (°C)</option>
+                <option value="Vibration">Vibration (mm/s)</option>
+                <option value="Pressure">Pressure (bar)</option>
+                <option value="RPM">Rotational Speed (RPM)</option>
+              </select>
             </div>
-            <input
-              type="checkbox"
-              style={{ width: 18, height: 18, cursor: 'pointer', accentColor: 'var(--neon-emerald)' }}
-              checked={formData.active}
-              onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
-            />
-          </div>
-        </form>
-      </Modal>
+            <div className="form-group">
+              <label className="form-label">Measurement Unit</label>
+              <input
+                type="text"
+                className="form-input"
+                value={formData.unit}
+                onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                placeholder="°C, mm/s, bar, RPM"
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Monitored Machine</label>
+              <select
+                className="form-input"
+                value={formData.machineId}
+                onChange={(e) => setFormData({ ...formData, machineId: Number(e.target.value) })}
+              >
+                {machines.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} (#{m.id})</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Saving...' : editingSensor ? 'Update Sensor' : 'Register Sensor'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

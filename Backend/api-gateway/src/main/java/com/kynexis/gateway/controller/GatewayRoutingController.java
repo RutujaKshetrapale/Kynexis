@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -36,6 +37,7 @@ public class GatewayRoutingController {
     private final RestClient restClient;
     private final String internalSecret;
 
+    @Autowired
     public GatewayRoutingController(
             GatewayProperties gatewayProperties,
             @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {

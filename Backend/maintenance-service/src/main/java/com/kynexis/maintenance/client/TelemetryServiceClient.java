@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class TelemetryServiceClient {
 
     private final RestClient restClient;
 
+    @Autowired
     public TelemetryServiceClient(
             @Value("${kynexis.services.telemetry-service.url:http://localhost:8083}") String serviceUrl,
             @Value("${kynexis.security.internal-secret:KynexisInternalServiceCommunicationSecretKey2026}") String internalSecret) {

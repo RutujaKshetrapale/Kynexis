@@ -14,30 +14,31 @@ export default function EmptyState({
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '3.5rem 1.5rem',
+      padding: '48px 24px',
       textAlign: 'center',
-      background: 'rgba(255, 255, 255, 0.01)',
-      border: '1px dashed var(--border-subtle)',
+      background: 'var(--bg-surface)',
+      border: '1px dashed var(--border-medium)',
       borderRadius: 'var(--radius-lg)',
-      margin: '1rem 0'
+      margin: '16px 0'
     }}>
       <div style={{
-        width: 56,
-        height: 56,
-        borderRadius: '50%',
-        background: 'rgba(255, 255, 255, 0.04)',
+        width: 48,
+        height: 48,
+        borderRadius: 'var(--radius-md)',
+        background: 'var(--bg-surface-subtle)',
+        border: '1px solid var(--border-light)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        marginBottom: '1rem',
+        marginBottom: '12px',
         color: 'var(--text-muted)'
       }}>
-        <Icon size={28} />
+        <Icon size={24} />
       </div>
-      <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
+      <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
         {title}
       </h3>
-      <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: 400, marginBottom: actionLabel ? '1.25rem' : 0 }}>
+      <p style={{ fontSize: '13px', color: 'var(--text-muted)', maxWidth: 420, marginBottom: actionLabel ? '16px' : 0 }}>
         {description}
       </p>
       {actionLabel && onAction && (

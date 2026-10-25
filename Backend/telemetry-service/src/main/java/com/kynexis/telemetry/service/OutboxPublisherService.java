@@ -54,12 +54,19 @@ public class OutboxPublisherService {
      */
     @Scheduled(fixedDelay = 5000)
     public void pollAndPublishPending() {
-        List<OutboxEvent> pending = outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
-        if (pending.isEmpty()) return;
+        if (kafkaTemplate == null) {
+            return;
+        }
+        try {
+            List<OutboxEvent> pending = outboxEventRepository.findTop50ByStatusOrderByCreatedAtAsc(OutboxStatus.PENDING);
+            if (pending.isEmpty()) return;
 
-        log.debug("Outbox poller found {} pending telemetry events", pending.size());
-        for (OutboxEvent event : pending) {
-            publishEvent(event);
+            log.debug("Outbox poller found {} pending telemetry events", pending.size());
+            for (OutboxEvent event : pending) {
+                publishEvent(event);
+            }
+        } catch (Exception ex) {
+            log.warn("Outbox poller could not query pending events: {}", ex.getMessage());
         }
     }
 

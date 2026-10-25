@@ -1,478 +1,400 @@
 import React, { useState, useEffect } from 'react';
 import { telemetryApi, machinesApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
 import Modal from '../components/Modal';
+import LoadingSpinner from '../components/LoadingSpinner';
+import EmptyState from '../components/EmptyState';
 import { 
-  Activity, 
-  Plus, 
-  Cpu, 
-  Thermometer, 
-  Gauge, 
-  Zap, 
-  Clock, 
-  Send, 
-  CheckCircle2, 
-  AlertTriangle 
+  ChevronDown, 
+  Download,
+  Plus,
+  Activity,
+  Flame,
+  Gauge,
+  RotateCw
 } from 'lucide-react';
 
 export default function TelemetryView() {
-  const { hasRole } = useAuth();
-  const [telemetry, setTelemetry] = useState([]);
+  const [readings, setReadings] = useState([]);
   const [machines, setMachines] = useState([]);
-  const [selectedMachineId, setSelectedMachineId] = useState('1');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedMachine, setSelectedMachine] = useState('ALL');
+  const [timeRange, setTimeRange] = useState('All Time');
+  const [showMachineMenu, setShowMachineMenu] = useState(false);
+  const [showTimeMenu, setShowTimeMenu] = useState(false);
 
-  // Ingestion Simulator Form State
-  const [simModalOpen, setSimModalOpen] = useState(false);
-  const [simForm, setSimForm] = useState({
-    machineId: '1',
-    temperature: 75.0,
-    vibration: 2.1,
-    pressure: 46.0,
-    rpm: 3200
-  });
-  const [submitting, setSubmitting] = useState(false);
-  const [notice, setNotice] = useState(null);
+  // Record Telemetry Modal
+  const [modalOpen, setModalOpen] = useState(false);
+  const [formData, setFormData] = useState({ machineId: 1, temperature: 65.5, vibration: 1.4, pressure: 5.2, rpm: 1200 });
+  const [saving, setSaving] = useState(false);
 
-  const fetchData = async (machineId) => {
+  const fetchData = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const [machList, telemList] = await Promise.all([
-        machinesApi.getAll(),
-        machineId ? telemetryApi.getByMachine(machineId) : telemetryApi.getAll()
+      const [tData, mData] = await Promise.all([
+        telemetryApi.getAll(),
+        machinesApi.getAll()
       ]);
-      setMachines(machList || []);
-      setTelemetry(Array.isArray(telemList) ? telemList : []);
+      setReadings(Array.isArray(tData) ? tData : []);
+      setMachines(Array.isArray(mData) ? mData : []);
     } catch (err) {
-      console.error('Failed to load telemetry:', err);
+      console.warn('Telemetry fetch error:', err);
+      setError(err.message || 'Failed to query telemetry records from database');
+      setReadings([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData(selectedMachineId);
-  }, [selectedMachineId]);
+    fetchData();
+  }, []);
 
-  const handleSimulateSubmit = async (e) => {
+  const handleRecord = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setNotice(null);
-
+    setSaving(true);
     try {
-      const payload = {
-        machineId: Number(simForm.machineId),
-        temperature: Number(simForm.temperature),
-        vibration: Number(simForm.vibration),
-        pressure: Number(simForm.pressure),
-        rpm: Number(simForm.rpm),
-        timestamp: new Date().toISOString().slice(0, 19)
-      };
-
-      await telemetryApi.create(payload);
-      
-      let message = 'Telemetry reading successfully ingested and routed to Alert Engine.';
-      let isCritical = false;
-      if (payload.temperature > 85) {
-        message = '⚠️ CRITICAL ALERT TRIGGERED: Spindle temperature exceeded 85°C limit!';
-        isCritical = true;
-      }
-
-      setNotice({ text: message, isCritical });
-      setSimModalOpen(false);
-      await fetchData(selectedMachineId);
+      await telemetryApi.create(formData);
+      setModalOpen(false);
+      await fetchData();
     } catch (err) {
-      alert(`Ingestion failed: ${err.message}`);
+      setError(err.message || 'Failed to record telemetry');
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   };
 
-  // Helper to render an SVG Sparkline chart
-  const renderSparkline = (dataKey, color, unit, threshold = null) => {
-    if (telemetry.length < 2) {
-      return (
-        <div style={{ height: 140, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-          Insufficient data points for trend chart
-        </div>
-      );
+  const filtered = readings.filter(r => {
+    if (selectedMachine !== 'ALL' && String(r.machineId) !== String(selectedMachine)) {
+      return false;
     }
+    return true;
+  });
 
-    const values = telemetry.map(t => Number(t[dataKey]) || 0);
-    const min = Math.min(...values) * 0.9;
-    const max = Math.max(...values, threshold || 0) * 1.1 || 100;
-    const width = 500;
-    const height = 140;
-
-    const points = values.map((val, idx) => {
-      const x = (idx / (values.length - 1)) * width;
-      const y = height - ((val - min) / (max - min)) * (height - 30) - 15;
-      return `${x},${y}`;
-    }).join(' ');
-
-    const latest = values[values.length - 1];
-
-    let thresholdY = null;
-    if (threshold !== null) {
-      thresholdY = height - ((threshold - min) / (max - min)) * (height - 30) - 15;
-    }
-
-    return (
-      <div style={{ position: 'relative', marginTop: '0.75rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
-          <span style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: "'JetBrains Mono', monospace", color }}>
-            {latest} {unit}
-          </span>
-          {threshold && (
-            <span style={{ fontSize: '0.7rem', color: '#f87171', fontWeight: 600 }}>
-              Threshold: {threshold} {unit}
-            </span>
-          )}
-        </div>
-
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height, overflow: 'visible' }}>
-          {/* Threshold Line */}
-          {thresholdY !== null && (
-            <line
-              x1="0"
-              y1={thresholdY}
-              x2={width}
-              y2={thresholdY}
-              stroke="#ef4444"
-              strokeDasharray="4 4"
-              strokeWidth="1.5"
-              opacity="0.8"
-            />
-          )}
-
-          {/* Area gradient */}
-          <defs>
-            <linearGradient id={`grad-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity="0.25" />
-              <stop offset="100%" stopColor={color} stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-          <polygon
-            points={`0,${height} ${points} ${width},${height}`}
-            fill={`url(#grad-${dataKey})`}
-          />
-
-          {/* Polyline */}
-          <polyline
-            fill="none"
-            stroke={color}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            points={points}
-          />
-
-          {/* Data Points */}
-          {values.map((val, idx) => {
-            const x = (idx / (values.length - 1)) * width;
-            const y = height - ((val - min) / (max - min)) * (height - 30) - 15;
-            return (
-              <circle
-                key={idx}
-                cx={x}
-                cy={y}
-                r={idx === values.length - 1 ? 5 : 3.5}
-                fill={idx === values.length - 1 ? '#ffffff' : color}
-                stroke={color}
-                strokeWidth="2"
-              />
-            );
-          })}
-        </svg>
-      </div>
-    );
+  const getMachineName = (id) => {
+    const found = machines.find(m => Number(m.id) === Number(id));
+    return found ? found.name : `Machine #${id}`;
   };
 
-  const selectedMachine = machines.find(m => m.id === Number(selectedMachineId));
+  // Top summary averages
+  const avgTemp = filtered.length > 0 ? (filtered.reduce((acc, r) => acc + (r.temperature || 0), 0) / filtered.length).toFixed(1) : 0;
+  const avgVib = filtered.length > 0 ? (filtered.reduce((acc, r) => acc + (r.vibration || 0), 0) / filtered.length).toFixed(2) : 0;
+  const avgPress = filtered.length > 0 ? (filtered.reduce((acc, r) => acc + (r.pressure || 0), 0) / filtered.length).toFixed(1) : 0;
+  const avgRpm = filtered.length > 0 ? Math.round(filtered.reduce((acc, r) => acc + (r.rpm || 0), 0) / filtered.length) : 0;
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">
-            <Activity style={{ color: 'var(--neon-cyan)' }} />
-            Real-Time IoT Telemetry Stream & Diagnostics
-          </h1>
-          <p className="page-description">
-            Sub-second sensor data ingestion, multi-metric time-series curves, and edge threshold triggers
-          </p>
+      {/* Error Alert with Retry */}
+      {error && (
+        <div style={{
+          marginBottom: '16px',
+          padding: '10px 14px',
+          borderRadius: 'var(--radius-sm)',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.35)',
+          color: '#EF4444',
+          fontSize: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={fetchData}
+            style={{
+              background: '#EF4444',
+              color: '#FFFFFF',
+              border: 'none',
+              padding: '4px 10px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 600
+            }}
+          >
+            Retry
+          </button>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          {/* Machine Filter Dropdown */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Cpu size={16} style={{ color: 'var(--neon-purple)' }} />
-            <select
-              className="form-select"
-              style={{ padding: '0.5rem 0.75rem', fontSize: '0.825rem' }}
-              value={selectedMachineId}
-              onChange={(e) => setSelectedMachineId(e.target.value)}
-            >
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} (#{m.id})
-                </option>
-              ))}
-            </select>
-          </div>
+      )}
 
-          {hasRole(['ADMIN', 'ENGINEER', 'OPERATOR']) && (
-            <button
-              type="button"
-              className="btn btn-primary"
-              onClick={() => setSimModalOpen(true)}
-            >
-              <Send size={15} />
-              Simulate Ingestion
-            </button>
+      {/* Top Filter Bar */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+        {/* Machine Filter Dropdown */}
+        <div style={{ position: 'relative' }}>
+          <button 
+            type="button" 
+            className="filter-dropdown-btn"
+            onClick={() => { setShowMachineMenu(!showMachineMenu); setShowTimeMenu(false); }}
+          >
+            <span>{selectedMachine === 'ALL' ? 'All Machines' : getMachineName(selectedMachine)}</span>
+            <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+          </button>
+
+          {showMachineMenu && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              right: 0,
+              width: '210px',
+              maxHeight: '260px',
+              overflowY: 'auto',
+              background: 'var(--surface)',
+              border: '1px solid var(--border)',
+              borderRadius: 'var(--radius-sm)',
+              boxShadow: 'var(--shadow-dropdown)',
+              padding: '6px',
+              zIndex: 100
+            }}>
+              <button
+                type="button"
+                onClick={() => { setSelectedMachine('ALL'); setShowMachineMenu(false); }}
+                style={{
+                  width: '100%',
+                  padding: '6px 8px',
+                  background: selectedMachine === 'ALL' ? 'var(--surface-elevated)' : 'transparent',
+                  border: 'none',
+                  borderRadius: 'var(--radius-sm)',
+                  fontSize: '11.5px',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  textAlign: 'left'
+                }}
+              >
+                All Machines
+              </button>
+              {machines.map(m => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => { setSelectedMachine(String(m.id)); setShowMachineMenu(false); }}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    background: selectedMachine === String(m.id) ? 'var(--surface-elevated)' : 'transparent',
+                    border: 'none',
+                    borderRadius: 'var(--radius-sm)',
+                    fontSize: '11.5px',
+                    color: selectedMachine === String(m.id) ? '#FFFFFF' : 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {m.name}
+                </button>
+              ))}
+            </div>
           )}
+        </div>
+
+        <button 
+          type="button" 
+          className="filter-dropdown-btn"
+          onClick={() => setTimeRange(timeRange === 'All Time' ? 'Recent Batches' : 'All Time')}
+        >
+          <span>{timeRange}</span>
+          <ChevronDown size={12} style={{ color: 'var(--text-muted)' }} />
+        </button>
+
+        <button
+          type="button"
+          className="btn btn-primary"
+          onClick={() => {
+            setFormData({ machineId: machines[0]?.id || 1, temperature: 68.2, vibration: 1.5, pressure: 5.3, rpm: 1250 });
+            setModalOpen(true);
+          }}
+        >
+          <Plus size={14} />
+          <span>Record Telemetry</span>
+        </button>
+      </div>
+
+      {/* 4 Metric Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+        <div className="kyn-card" style={{ padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
+            <span>Avg Temperature</span>
+            <Flame size={14} style={{ color: '#EF4444' }} />
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>
+            {avgTemp} °C
+          </div>
+        </div>
+
+        <div className="kyn-card" style={{ padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
+            <span>Avg Vibration</span>
+            <Activity size={14} style={{ color: '#F59E0B' }} />
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>
+            {avgVib} mm/s
+          </div>
+        </div>
+
+        <div className="kyn-card" style={{ padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
+            <span>Avg Pressure</span>
+            <Gauge size={14} style={{ color: '#0066FF' }} />
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>
+            {avgPress} bar
+          </div>
+        </div>
+
+        <div className="kyn-card" style={{ padding: '14px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '11px', marginBottom: '4px' }}>
+            <span>Avg Spindle Speed</span>
+            <RotateCw size={14} style={{ color: '#10B981' }} />
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: 700, color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>
+            {avgRpm.toLocaleString()} RPM
+          </div>
         </div>
       </div>
 
-      {notice && (
-        <div style={{
-          padding: '0.85rem 1.25rem',
-          borderRadius: 'var(--radius-md)',
-          background: notice.isCritical ? 'rgba(239, 68, 68, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-          border: `1px solid ${notice.isCritical ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.35)'}`,
-          color: notice.isCritical ? '#f87171' : '#34d399',
-          fontSize: '0.85rem',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.6rem',
-          marginBottom: '1.5rem'
-        }}>
-          {notice.isCritical ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
-          <span>{notice.text}</span>
+      {/* Main Telemetry Table */}
+      {loading ? (
+        <div style={{ minHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <LoadingSpinner message="Querying Telemetry Stream from Database..." />
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No Telemetry Readings Found"
+          description={selectedMachine !== 'ALL' ? `No telemetry logged for Machine #${selectedMachine}` : "No telemetry records in database."}
+          actionLabel="Log Telemetry"
+          onAction={() => setModalOpen(true)}
+        />
+      ) : (
+        <div className="table-container">
+          <table className="kyn-table">
+            <thead>
+              <tr>
+                <th>Reading ID</th>
+                <th>Monitored Machine</th>
+                <th>Temperature</th>
+                <th>Vibration</th>
+                <th>Pressure</th>
+                <th>Spindle RPM</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((t) => (
+                <tr key={t.id}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>
+                    {`#TEL-${String(t.id).padStart(4, '0')}`}
+                  </td>
+                  <td style={{ color: '#FFFFFF', fontWeight: 500 }}>
+                    {getMachineName(t.machineId)}
+                  </td>
+                  <td>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontWeight: 600,
+                      color: t.temperature > 75 ? '#EF4444' : (t.temperature > 65 ? '#F59E0B' : '#10B981')
+                    }}>
+                      {t.temperature?.toFixed(1)} °C
+                    </span>
+                  </td>
+                  <td>
+                    <span style={{
+                      fontFamily: 'var(--font-mono)',
+                      color: t.vibration > 2.0 ? '#EF4444' : 'var(--text-secondary)'
+                    }}>
+                      {t.vibration?.toFixed(2)} mm/s
+                    </span>
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                    {t.pressure?.toFixed(1)} bar
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
+                    {Math.round(t.rpm || 0)} RPM
+                  </td>
+                  <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                    {t.timestamp ? new Date(t.timestamp).toLocaleString() : 'Recent'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {loading ? (
-        <LoadingSpinner message="Querying telemetry time-series from Telemetry Service (:8083)..." />
-      ) : (
-        <>
-          {/* 4 Interactive Real-time Telemetry Trend Cards */}
-          <div className="grid-cols-2" style={{ marginBottom: '2rem' }}>
-            {/* Temperature Curve */}
-            <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                  <Thermometer size={18} style={{ color: '#f87171' }} />
-                  <span>Spindle Temperature (°C)</span>
-                </div>
-                <span className="badge badge-critical" style={{ fontSize: '0.675rem' }}>LIMIT: 85°C</span>
-              </div>
-              {renderSparkline('temperature', '#f87171', '°C', 85.0)}
+      {/* Record Telemetry Modal */}
+      {modalOpen && (
+        <Modal
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          title="Record Machine Sensor Telemetry"
+        >
+          <form onSubmit={handleRecord}>
+            <div className="form-group">
+              <label className="form-label">Target Machine</label>
+              <select
+                className="form-input"
+                value={formData.machineId}
+                onChange={(e) => setFormData({ ...formData, machineId: Number(e.target.value) })}
+              >
+                {machines.map(m => (
+                  <option key={m.id} value={m.id}>{m.name} (#{m.id})</option>
+                ))}
+              </select>
             </div>
-
-            {/* Vibration Curve */}
-            <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                  <Activity size={18} style={{ color: '#fbbf24' }} />
-                  <span>Harmonic Vibration (mm/s)</span>
-                </div>
-                <span className="badge badge-warning" style={{ fontSize: '0.675rem' }}>LIMIT: 6.0 mm/s</span>
-              </div>
-              {renderSparkline('vibration', '#fbbf24', 'mm/s', 6.0)}
+            <div className="form-group">
+              <label className="form-label">Temperature (°C)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="form-input"
+                value={formData.temperature}
+                onChange={(e) => setFormData({ ...formData, temperature: parseFloat(e.target.value) || 0 })}
+                required
+              />
             </div>
-
-            {/* Pressure Curve */}
-            <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                  <Gauge size={18} style={{ color: 'var(--neon-blue)' }} />
-                  <span>Hydraulic Pressure (PSI)</span>
-                </div>
-                <span className="badge badge-healthy" style={{ fontSize: '0.675rem' }}>NORMAL ENVELOPE</span>
-              </div>
-              {renderSparkline('pressure', '#38bdf8', 'PSI')}
+            <div className="form-group">
+              <label className="form-label">Vibration (mm/s)</label>
+              <input
+                type="number"
+                step="0.01"
+                className="form-input"
+                value={formData.vibration}
+                onChange={(e) => setFormData({ ...formData, vibration: parseFloat(e.target.value) || 0 })}
+                required
+              />
             </div>
-
-            {/* RPM Curve */}
-            <div className="card">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 600 }}>
-                  <Zap size={18} style={{ color: 'var(--neon-cyan)' }} />
-                  <span>Spindle Tachometer (RPM)</span>
-                </div>
-                <span className="badge badge-active" style={{ fontSize: '0.675rem' }}>CONTINUOUS</span>
-              </div>
-              {renderSparkline('rpm', '#00f2fe', 'RPM')}
+            <div className="form-group">
+              <label className="form-label">Pressure (bar)</label>
+              <input
+                type="number"
+                step="0.1"
+                className="form-input"
+                value={formData.pressure}
+                onChange={(e) => setFormData({ ...formData, pressure: parseFloat(e.target.value) || 0 })}
+                required
+              />
             </div>
-          </div>
-
-          {/* Historical Telemetry Readings Table */}
-          <div className="card">
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Clock size={18} style={{ color: 'var(--neon-cyan)' }} />
-              Ingested Telemetry Packets: {selectedMachine?.name || `Machine #${selectedMachineId}`}
-            </h2>
-
-            <div className="table-wrap">
-              <table className="industrial-table">
-                <thead>
-                  <tr>
-                    <th>Reading ID</th>
-                    <th>Ingest Timestamp</th>
-                    <th>Temperature</th>
-                    <th>Vibration</th>
-                    <th>Pressure</th>
-                    <th>RPM</th>
-                    <th>Safety Assessment</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {telemetry.map((t) => {
-                    const isOverheat = t.temperature > 85;
-                    const isVibWarn = t.vibration > 4;
-                    return (
-                      <tr key={t.id}>
-                        <td style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: 'var(--neon-cyan)' }}>
-                          TLM-{String(t.id).padStart(5, '0')}
-                        </td>
-                        <td>
-                          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                            {new Date(t.timestamp).toLocaleString()}
-                          </div>
-                        </td>
-                        <td>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: isOverheat ? '#f87171' : 'var(--text-primary)' }}>
-                            {t.temperature}°C
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontWeight: 700, color: isVibWarn ? '#fbbf24' : 'var(--text-primary)' }}>
-                            {t.vibration} mm/s
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>
-                            {t.pressure} PSI
-                          </span>
-                        </td>
-                        <td>
-                          <span style={{ fontFamily: "'JetBrains Mono', monospace", color: 'var(--neon-cyan)', fontWeight: 600 }}>
-                            {t.rpm} RPM
-                          </span>
-                        </td>
-                        <td>
-                          {isOverheat ? (
-                            <span className="badge badge-critical">CRITICAL OVERHEAT</span>
-                          ) : isVibWarn ? (
-                            <span className="badge badge-warning">ELEVATED VIBRATION</span>
-                          ) : (
-                            <span className="badge badge-healthy">NOMINAL</span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+            <div className="form-group">
+              <label className="form-label">Rotational Speed (RPM)</label>
+              <input
+                type="number"
+                className="form-input"
+                value={formData.rpm}
+                onChange={(e) => setFormData({ ...formData, rpm: parseFloat(e.target.value) || 0 })}
+                required
+              />
             </div>
-          </div>
-        </>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
+                Cancel
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Recording...' : 'Submit Telemetry'}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
-
-      {/* Simulator Modal */}
-      <Modal
-        isOpen={simModalOpen}
-        onClose={() => setSimModalOpen(false)}
-        title="Simulate Edge Sensor Ingestion (POST /api/telemetry)"
-        footer={
-          <>
-            <button type="button" className="btn btn-ghost" onClick={() => setSimModalOpen(false)}>
-              Cancel
-            </button>
-            <button type="button" className="btn btn-primary" onClick={handleSimulateSubmit} disabled={submitting}>
-              {submitting ? 'Streaming Packet...' : 'Transmit Ingest Packet'}
-            </button>
-          </>
-        }
-      >
-        <form onSubmit={handleSimulateSubmit}>
-          <p style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
-            Simulate an edge gateway transmitting high-frequency industrial IoT measurements. Exceeding 85°C will automatically trigger an automated Overheating Alert.
-          </p>
-
-          <div className="form-group">
-            <label className="form-label" htmlFor="sim-machine">Target Machine</label>
-            <select
-              id="sim-machine"
-              className="form-select"
-              value={simForm.machineId}
-              onChange={(e) => setSimForm({ ...simForm, machineId: e.target.value })}
-            >
-              {machines.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name} (#{m.id})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid-cols-2" style={{ gap: '0.75rem', marginBottom: '1rem' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="sim-temp">Temperature (°C)</label>
-              <input
-                id="sim-temp"
-                type="number"
-                step="0.1"
-                className="form-input"
-                value={simForm.temperature}
-                onChange={(e) => setSimForm({ ...simForm, temperature: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="sim-vib">Vibration (mm/s)</label>
-              <input
-                id="sim-vib"
-                type="number"
-                step="0.1"
-                className="form-input"
-                value={simForm.vibration}
-                onChange={(e) => setSimForm({ ...simForm, vibration: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid-cols-2" style={{ gap: '0.75rem' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="sim-pressure">Pressure (PSI)</label>
-              <input
-                id="sim-pressure"
-                type="number"
-                step="0.1"
-                className="form-input"
-                value={simForm.pressure}
-                onChange={(e) => setSimForm({ ...simForm, pressure: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label className="form-label" htmlFor="sim-rpm">RPM Speed</label>
-              <input
-                id="sim-rpm"
-                type="number"
-                step="10"
-                className="form-input"
-                value={simForm.rpm}
-                onChange={(e) => setSimForm({ ...simForm, rpm: e.target.value })}
-                required
-              />
-            </div>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

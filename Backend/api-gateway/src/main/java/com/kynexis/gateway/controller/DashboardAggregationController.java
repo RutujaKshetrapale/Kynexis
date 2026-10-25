@@ -37,7 +37,8 @@ public class DashboardAggregationController {
 
         long totalPlants = fetchLong(gatewayProperties.getPlantService().getUrl() + "/api/plants/count");
         long totalMachines = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count");
-        long activeMachines = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/ACTIVE");
+        long activeMachines = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/RUNNING")
+                + fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/ACTIVE");
         long totalSensors = fetchLong(gatewayProperties.getSensorService().getUrl() + "/api/sensors/count");
         long unresolvedAlerts = fetchLong(gatewayProperties.getAlertService().getUrl() + "/api/alerts/count/unresolved");
 
@@ -63,8 +64,12 @@ public class DashboardAggregationController {
     public ResponseEntity<DashboardMachineStatusResponse> getMachineStatus() {
         log.debug("Aggregating dashboard machine status counts across machine-service");
 
-        long active = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/ACTIVE");
-        long inactive = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/INACTIVE");
+        long active = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/RUNNING")
+                + fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/ACTIVE");
+        long inactive = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/IDLE")
+                + fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/STOPPED")
+                + fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/OFFLINE")
+                + fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/INACTIVE");
         long maintenance = fetchLong(gatewayProperties.getMachineService().getUrl() + "/api/machines/count/status/MAINTENANCE");
 
         DashboardMachineStatusResponse response = DashboardMachineStatusResponse.builder()
