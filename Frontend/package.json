@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently -k \"npm:backend\" \"vite\"",
+    "dev:ui": "vite",
+    "backend": "concurrently -k -p \"[{name}]\" -n \"GATEWAY,AUTH,PLANT,MACHINE,SENSOR,TELEM,ALERT,MAINT,PROD,ENERGY\" -c \"cyan,blue,green,magenta,yellow,blueBright,red,magentaBright,greenBright,yellowBright\" \"java -jar ../Backend/api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/authentication-service/target/authentication-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/plant-service/target/plant-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/machine-service/target/machine-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/sensor-service/target/sensor-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/telemetry-service/target/telemetry-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/alert-service/target/alert-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/maintenance-service/target/maintenance-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/production-service/target/production-service-0.0.1-SNAPSHOT.jar\" \"java -jar ../Backend/energy-service/target/energy-service-0.0.1-SNAPSHOT.jar\"",
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -19,6 +21,7 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.6",
     "oxlint": "^1.81.0",
     "vite": "^8.3.0"
   }
