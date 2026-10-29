@@ -308,65 +308,31 @@ if ($needsBuild -and -not $SkipBuild) {
     Write-Host "  [OK] All microservice artifacts are up to date. (Skipping build: 0.0s)" -ForegroundColor Green
 }
 
-# Step 3: Launch Microservices in Dependency Order
-Write-Host "`n[3/5] Starting Backend Microservices..." -ForegroundColor Yellow
+# Step 3: Launch All Microservices Simultaneously in Parallel
+Write-Host "`n[3/5] Starting All Backend Microservices Simultaneously..." -ForegroundColor Yellow
 
-$groups = $ServiceDefinitions | Group-Object -Property { $_["Group"] } | Sort-Object Name
-
-foreach ($grp in $groups) {
-    $groupLabel = switch ($grp.Name) {
-        "1" { "Core Domain and Persistence Services (Auth, Plant, Machine, Sensor)" }
-        "2" { "Event and Analytics Microservices (Telemetry, Alert, Maintenance, Production, Energy)" }
-        "3" { "API Gateway and Routing Layer" }
-        default { "Group " + $grp.Name }
-    }
-    Write-Host "  Launching Group $($grp.Name): $groupLabel..." -ForegroundColor Cyan
-
-    foreach ($svc in $grp.Group) {
-        $port = $svc.Port
-        $name = $svc.Name
-        $jarPath = Join-Path $BackendDir "$name\target\$name-0.0.1-SNAPSHOT.jar"
-        
-        # Check if already listening and healthy
-        if (Test-PortOpen "localhost" $port) {
-            if (Test-HttpHealth "http://localhost:$port/actuator/health") {
-                Write-Host "    [REUSED] $name is already healthy on port $port." -ForegroundColor DarkGreen
-                continue
-            }
+foreach ($svc in $ServiceDefinitions) {
+    $port = $svc.Port
+    $name = $svc.Name
+    $jarPath = Join-Path $BackendDir "$name\target\$name-0.0.1-SNAPSHOT.jar"
+    
+    # Check if already listening and healthy
+    if (Test-PortOpen "localhost" $port) {
+        if (Test-HttpHealth "http://localhost:$port/actuator/health") {
+            Write-Host "    [REUSED] $name is already healthy on port $port." -ForegroundColor DarkGreen
+            continue
         }
-
-        # Launch Java Process with Developer Memory Optimization & System Properties
-        $sysProps = "-Dspring.datasource.password=`"$DbPassword`" -Dspring.datasource.username=`"$DbUser`" -Dspring.datasource.url=`"$DbUrl`" -Djwt.secret=`"$($env:JWT_SECRET)`" -Dkynexis.security.internal-secret=`"$($env:INTERNAL_API_SECRET)`""
-        $jvmArgs = "-Xms64m -Xmx$JvmHeap -XX:+TieredCompilation -XX:TieredStopAtLevel=1 $sysProps -jar `"$jarPath`""
-        $proc = Start-DetachedProcess "java" $jvmArgs (Join-Path $BackendDir $name)
-        Add-TrackedPid $proc.Id $name
-        Write-Host "    [STARTING] $name (PID: $($proc.Id), Port: $port)..." -ForegroundColor Gray
     }
 
-    # Bounded readiness wait for current group
-    $groupWaitSw = [System.Diagnostics.Stopwatch]::StartNew()
-    $allReady = $false
-    while ($groupWaitSw.Elapsed.TotalSeconds -lt $TimeoutSeconds) {
-        $pending = @()
-        foreach ($svc in $grp.Group) {
-            if (-not (Test-HttpHealth "http://localhost:$($svc.Port)/actuator/health")) {
-                $pending += $svc.Name
-            }
-        }
-        if ($pending.Count -eq 0) {
-            $allReady = $true
-            break
-        }
-        Start-Sleep -Milliseconds 500
-    }
-
-    if (-not $allReady) {
-        Write-Warning "Group $($grp.Name) did not reach UP status within $TimeoutSeconds seconds. Pending: $($pending -join ', ')"
-    } else {
-        $grpElapsed = [math]::Round($groupWaitSw.Elapsed.TotalSeconds, 2)
-        Write-Host "    [OK] Group $($grp.Name) healthy in $grpElapsed s." -ForegroundColor Green
-    }
+    # Launch Java Process with Developer Memory Optimization & System Properties
+    $sysProps = "-Dspring.datasource.password=`"$DbPassword`" -Dspring.datasource.username=`"$DbUser`" -Dspring.datasource.url=`"$DbUrl`" -Djwt.secret=`"$($env:JWT_SECRET)`" -Dkynexis.security.internal-secret=`"$($env:INTERNAL_API_SECRET)`""
+    $jvmArgs = "-Xms64m -Xmx$JvmHeap -XX:+TieredCompilation -XX:TieredStopAtLevel=1 $sysProps -jar `"$jarPath`""
+    $proc = Start-DetachedProcess "java" $jvmArgs (Join-Path $BackendDir $name)
+    Add-TrackedPid $proc.Id $name
+    Write-Host "    [SPAWNED] $name (PID: $($proc.Id), Port: $port)..." -ForegroundColor Cyan
 }
+
+Write-Host "    [OK] All 10 microservices spawned in parallel!" -ForegroundColor Green
 
 # Step 4: Launch Frontend (if FullStack)
 if ($Mode -eq 'FullStack') {
