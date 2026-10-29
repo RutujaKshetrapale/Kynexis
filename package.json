@@ -1,9 +1,0 @@
-{
-  "name": "kynexis",
-  "version": "1.0.0",
-  "private": true,
-  "scripts": {
-    "dev": "npm run dev --prefix Frontend",
-    "build": "npm run build --prefix Frontend"
-  }
-}
