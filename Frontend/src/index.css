@@ -765,14 +765,14 @@ html, body {
 }
 
 .search-box input {
-  padding: 6px 12px 6px 32px;
+  padding: 7px 14px 7px 38px !important;
   font-size: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   outline: none;
-  width: 220px;
+  width: 240px;
   transition: border-color var(--transition-fast);
 }
 
@@ -782,9 +782,10 @@ html, body {
 
 .search-box svg {
   position: absolute;
-  left: 10px;
+  left: 12px;
   color: var(--text-muted);
   pointer-events: none;
+  z-index: 2;
 }
 
 /* Dropdown filter button */
@@ -1049,3 +1050,438 @@ html, body {
     display: none;
   }
 }
+
+/* ============================================================
+   KYNEXIS — AI Digital Twin Styling & 3D HUD Specifications
+   ============================================================ */
+
+.spin-animation {
+  animation: dt-spin 1s linear infinite;
+}
+
+@keyframes dt-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.pulse-radar {
+  animation: dt-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes dt-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.9); }
+}
+
+.badge-unknown {
+  background: rgba(100, 116, 139, 0.12);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+  color: #94A3B8;
+}
+
+.factory-scene-viewport:focus {
+  outline: 1.5px solid var(--accent, #0066FF);
+}
+
+.machine-detail-panel::-webkit-scrollbar {
+  width: 5px;
+}
+
+.machine-detail-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.machine-detail-panel::-webkit-scrollbar-thumb {
+  background: var(--border-strong, #334155);
+  border-radius: 4px;
+}
+
+@media (max-width: 1100px) {
+  .digital-twin-page > div[style*="gridTemplateColumns"] {
+    grid-template-columns: 1fr !important;
+  }
+  .machine-detail-panel {
+    max-width: 100% !important;
+  }
+}
+
+.scenario-interactive-card {
+  transition: all 0.2s ease;
+}
+
+.scenario-interactive-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent, #0066FF) !important;
+  box-shadow: 0 6px 16px rgba(0, 102, 255, 0.18);
+}
+
+.scenario-interactive-card:hover svg[class*="lucide-arrow-right"] {
+  color: var(--accent, #0066FF) !important;
+  transform: translateX(3px);
+}
+
+.machine-row-hover:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+@keyframes pulseRing {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.95;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   Record Batch Primary Action Button (Redesigned)
+   ============================================================ */
+.btn-record-batch {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0066FF 0%, #0047BA 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(56, 189, 248, 0.45);
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-record-batch::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
+  transform: skewX(-20deg);
+  transition: left 0.6s ease;
+}
+
+.btn-record-batch:hover {
+  background: linear-gradient(135deg, #1D78FF 0%, #005ce6 100%);
+  border-color: rgba(56, 189, 248, 0.8);
+  box-shadow: 0 6px 20px rgba(0, 102, 255, 0.55), 0 0 12px rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-record-batch:hover::after {
+  left: 140%;
+}
+
+.btn-record-batch:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
+}
+
+.btn-record-batch .btn-record-batch-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================
+   Action Buttons for Edit & Delete (Redesigned)
+   ============================================================ */
+.action-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid transparent;
+  outline: none;
+  line-height: 1;
+}
+
+/* Edit Action Button */
+.action-btn-edit {
+  background: rgba(0, 102, 255, 0.12);
+  color: #38BDF8;
+  border-color: rgba(56, 189, 248, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.action-btn-edit:hover {
+  background: rgba(0, 102, 255, 0.25);
+  color: #FFFFFF;
+  border-color: rgba(56, 189, 248, 0.7);
+  box-shadow: 0 2px 10px rgba(0, 102, 255, 0.4), 0 0 8px rgba(56, 189, 248, 0.25);
+  transform: translateY(-1px);
+}
+
+.action-btn-edit:active {
+  transform: translateY(0);
+}
+
+/* Delete Action Button */
+.action-btn-delete {
+  background: rgba(239, 68, 68, 0.12);
+  color: #EF4444;
+  border-color: rgba(239, 68, 68, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.action-btn-delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #FFFFFF;
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4), 0 0 8px rgba(239, 68, 68, 0.25);
+  transform: translateY(-1px);
+}
+
+.action-btn-delete:active {
+  transform: translateY(0);
+}
+
+/* ============================================================
+   Redesigned Manufactured Volume by Asset Component
+   ============================================================ */
+.asset-volume-container {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.asset-volume-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #0066FF 0%, #00D2FF 50%, transparent 100%);
+}
+
+.asset-volume-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.asset-volume-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.asset-volume-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(0, 102, 255, 0.12);
+  border: 1px solid rgba(0, 102, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0066FF;
+  box-shadow: 0 0 12px rgba(0, 102, 255, 0.2);
+}
+
+.asset-volume-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.asset-volume-subtitle {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.asset-volume-summary-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.asset-summary-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.asset-summary-pill strong {
+  color: #FFFFFF;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.asset-volume-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .asset-volume-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.asset-volume-card {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.asset-volume-card:hover {
+  border-color: rgba(0, 102, 255, 0.4);
+  background: rgba(22, 31, 46, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+}
+
+.asset-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 10px;
+}
+
+.asset-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: #38BDF8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  margin-right: 6px;
+}
+
+.asset-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.asset-type-badge {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.asset-volume-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.asset-volume-track {
+  height: 10px;
+  border-radius: 5px;
+  background: #0B0F17;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  display: flex;
+  margin: 10px 0 12px 0;
+  position: relative;
+}
+
+.asset-bar-good {
+  height: 100%;
+  background: linear-gradient(90deg, #0066FF 0%, #00D2FF 100%);
+  border-radius: 4px 0 0 4px;
+  box-shadow: 0 0 8px rgba(0, 102, 255, 0.4);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.asset-bar-scrap {
+  height: 100%;
+  background: #EF4444;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.asset-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.asset-metric-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.asset-metric-chip .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+
+

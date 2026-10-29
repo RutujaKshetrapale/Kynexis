@@ -8,6 +8,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 // Views
 import LoginView from './views/LoginView';
 import DashboardView from './views/DashboardView';
+import DigitalTwinView from './views/DigitalTwinView';
 import PlantsView from './views/PlantsView';
 import MachinesView from './views/MachinesView';
 import SensorsView from './views/SensorsView';
@@ -19,12 +20,12 @@ import EnergyView from './views/EnergyView';
 import ProfileView from './views/ProfileView';
 
 export default function App() {
-  const { isAuthenticated, loading } = useAuth();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const { user, isAuthenticated, loading } = useAuth();
+  const [activeTab, setActiveTab] = useState('production');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedPlant, setSelectedPlant] = useState('ALL');
 
-  if (loading) {
+  if (loading && !user) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <LoadingSpinner message="Initializing Smart Factory Security Session..." />
@@ -32,7 +33,7 @@ export default function App() {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !user) {
     return <LoginView />;
   }
 
@@ -40,6 +41,8 @@ export default function App() {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardView onNavigate={setActiveTab} selectedPlant={selectedPlant} />;
+      case 'digital-twin':
+        return <DigitalTwinView onNavigate={setActiveTab} selectedPlant={selectedPlant} onSelectPlant={setSelectedPlant} />;
       case 'plants':
         return <PlantsView />;
       case 'machines':
@@ -72,12 +75,14 @@ export default function App() {
         setCollapsed={setSidebarCollapsed}
       />
       <div className={`main-content ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-        <Navbar 
-          selectedPlant={selectedPlant} 
-          setSelectedPlant={setSelectedPlant} 
-          activeTab={activeTab} 
-        />
-        <main>
+        {activeTab !== 'digital-twin' && (
+          <Navbar 
+            selectedPlant={selectedPlant} 
+            setSelectedPlant={setSelectedPlant} 
+            activeTab={activeTab} 
+          />
+        )}
+        <main style={activeTab === 'digital-twin' ? { padding: '16px 20px', minHeight: '100vh', display: 'flex', flexDirection: 'column' } : {}}>
           <ErrorBoundary key={activeTab}>
             {renderActiveView()}
           </ErrorBoundary>

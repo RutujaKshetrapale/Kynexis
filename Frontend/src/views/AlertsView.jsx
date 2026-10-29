@@ -25,7 +25,13 @@ export default function AlertsView() {
 
   // Modal State
   const [modalOpen, setModalOpen] = useState(false);
-  const [formData, setFormData] = useState({ machineId: 1, alertType: 'HIGH_TEMPERATURE', severity: 'WARNING', message: '' });
+  const [formData, setFormData] = useState({ 
+    machineId: 1, 
+    type: 'HIGH_TEMPERATURE', 
+    alertType: 'HIGH_TEMPERATURE', 
+    severity: 'WARNING', 
+    message: '' 
+  });
   const [saving, setSaving] = useState(false);
 
   const fetchAlerts = async () => {
@@ -54,11 +60,24 @@ export default function AlertsView() {
   const handleCreate = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
     try {
-      await alertsApi.create(formData);
+      const selectedType = formData.type || formData.alertType || 'HIGH_TEMPERATURE';
+      const machId = Number(formData.machineId || machines[0]?.id || 1);
+      const msg = formData.message?.trim() || `${selectedType} anomaly observed on ${getMachineName(machId)}`;
+
+      await alertsApi.create({
+        machineId: machId,
+        type: selectedType,
+        alertType: selectedType,
+        severity: formData.severity || 'WARNING',
+        message: msg,
+        resolved: false
+      });
       setModalOpen(false);
       await fetchAlerts();
     } catch (err) {
+      console.error('Trigger alert error:', err);
       setError(err.message || 'Failed to trigger alert');
     } finally {
       setSaving(false);
@@ -89,9 +108,13 @@ export default function AlertsView() {
   };
 
   const filtered = alerts.filter(a => {
-    const msg = (a.message || `${a.alertType} on Machine #${a.machineId}`).toLowerCase();
+    const eventType = a.type || a.alertType || 'UNKNOWN_ALERT';
+    const msg = (a.message || `${eventType} on Machine #${a.machineId}`).toLowerCase();
     const machName = getMachineName(a.machineId).toLowerCase();
-    const matchSearch = msg.includes(searchTerm.toLowerCase()) || machName.includes(searchTerm.toLowerCase()) || `#ALT-${a.id}`.includes(searchTerm);
+    const matchSearch = msg.includes(searchTerm.toLowerCase()) || 
+                        machName.includes(searchTerm.toLowerCase()) || 
+                        `#ALT-${a.id}`.includes(searchTerm) ||
+                        eventType.toLowerCase().includes(searchTerm.toLowerCase());
 
     let matchStatus = true;
     if (statusFilter === 'OPEN') matchStatus = !a.resolved;
@@ -253,7 +276,14 @@ export default function AlertsView() {
           type="button"
           className="btn btn-primary"
           onClick={() => {
-            setFormData({ machineId: machines[0]?.id || 1, alertType: 'HIGH_TEMPERATURE', severity: 'WARNING', message: 'Abnormal thermal reading observed' });
+            const defaultMachId = machines[0]?.id || 1;
+            setFormData({ 
+              machineId: defaultMachId, 
+              type: 'HIGH_TEMPERATURE',
+              alertType: 'HIGH_TEMPERATURE', 
+              severity: 'WARNING', 
+              message: `Abnormal thermal reading observed on ${getMachineName(defaultMachId)}` 
+            });
             setModalOpen(true);
           }}
         >
@@ -320,7 +350,7 @@ export default function AlertsView() {
                       {getMachineName(item.machineId)}
                     </td>
                     <td style={{ color: 'var(--text-secondary)' }}>
-                      {item.message || item.alertType}
+                      {item.message || item.type || item.alertType}
                     </td>
                     <td style={{ color: 'var(--text-muted)', fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
                       {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Recent'}
@@ -405,8 +435,8 @@ export default function AlertsView() {
               <label className="form-label">Alert Type</label>
               <select
                 className="form-input"
-                value={formData.alertType}
-                onChange={(e) => setFormData({ ...formData, alertType: e.target.value })}
+                value={formData.type || formData.alertType}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value, alertType: e.target.value })}
               >
                 <option value="HIGH_TEMPERATURE">HIGH_TEMPERATURE</option>
                 <option value="HIGH_VIBRATION">HIGH_VIBRATION</option>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { machinesApi, plantsApi } from '../services/api';
+import { machinesApi, plantsApi, getOfflinePlantIds } from '../services/api';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function MachinesView({ selectedPlant }) {
+  const [offlinePlantIds, setOfflinePlantIds] = useState(() => getOfflinePlantIds());
   const [machines, setMachines] = useState([]);
   const [plants, setPlants] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,11 @@ export default function MachinesView({ selectedPlant }) {
 
   useEffect(() => {
     fetchMachines();
+    const handleStatusChange = () => {
+      setOfflinePlantIds(getOfflinePlantIds());
+    };
+    window.addEventListener('kynexis-plant-status-change', handleStatusChange);
+    return () => window.removeEventListener('kynexis-plant-status-change', handleStatusChange);
   }, []);
 
   const handleOpenCreate = () => {
@@ -87,25 +93,42 @@ export default function MachinesView({ selectedPlant }) {
     }
   };
 
+  const isMachineInOfflinePlant = (m) => {
+    const pId = Number(m.plantId || m.plant?.id);
+    return offlinePlantIds.includes(pId);
+  };
+
   const filtered = machines.filter(m => {
     const matchSearch = (m.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
                         `#00${m.id}`.includes(searchTerm) ||
                         (m.type || '').toLowerCase().includes(searchTerm.toLowerCase());
     
     let matchStatus = true;
+    const plantOffline = isMachineInOfflinePlant(m);
+    const effectiveStatus = plantOffline ? 'OFFLINE' : (m.status || 'RUNNING').toUpperCase();
+
     if (statusFilter !== 'ALL') {
-      const s = (m.status || '').toUpperCase();
-      if (statusFilter === 'RUNNING') matchStatus = s === 'RUNNING' || s === 'ACTIVE';
-      else if (statusFilter === 'IDLE') matchStatus = s === 'IDLE' || s === 'STOPPED';
-      else if (statusFilter === 'MAINTENANCE') matchStatus = s === 'MAINTENANCE';
+      if (statusFilter === 'RUNNING') matchStatus = effectiveStatus === 'RUNNING' || effectiveStatus === 'ACTIVE';
+      else if (statusFilter === 'IDLE') matchStatus = effectiveStatus === 'IDLE' || effectiveStatus === 'STOPPED';
+      else if (statusFilter === 'MAINTENANCE') matchStatus = effectiveStatus === 'MAINTENANCE';
+      else if (statusFilter === 'OFFLINE') matchStatus = effectiveStatus === 'OFFLINE' || effectiveStatus === 'INACTIVE';
     }
 
     const matchPlant = plantFilter === 'ALL' || String(m.plantId) === String(plantFilter);
     return matchSearch && matchStatus && matchPlant;
   });
 
-  const getStatusBadge = (status) => {
-    const s = (status || '').toUpperCase();
+  const getStatusBadge = (m) => {
+    const plantOffline = isMachineInOfflinePlant(m);
+    const s = (m.status || '').toUpperCase();
+    if (plantOffline || s === 'OFFLINE' || s === 'INACTIVE') {
+      return (
+        <span className="badge badge-offline" title={plantOffline ? 'Machine is Offline (Host Plant is Inactive)' : 'Machine is Offline'}>
+          <span className="badge-dot" />
+          <span>{plantOffline ? 'Offline (Plant Inactive)' : 'Offline'}</span>
+        </span>
+      );
+    }
     if (s === 'RUNNING' || s === 'ACTIVE') {
       return (
         <span className="badge badge-online">
@@ -262,7 +285,7 @@ export default function MachinesView({ selectedPlant }) {
               padding: '6px',
               zIndex: 100
             }}>
-              {['ALL', 'RUNNING', 'IDLE', 'MAINTENANCE'].map(st => (
+              {['ALL', 'RUNNING', 'IDLE', 'MAINTENANCE', 'OFFLINE'].map(st => (
                 <button
                   key={st}
                   type="button"
@@ -347,29 +370,31 @@ export default function MachinesView({ selectedPlant }) {
                     {getPlantName(m.plantId)}
                   </td>
                   <td>
-                    {getStatusBadge(m.status)}
+                    {getStatusBadge(m)}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '8px' }}>
+                    <div className="action-btn-group">
                       <button
                         type="button"
+                        className="action-btn action-btn-edit"
                         onClick={() => {
                           setEditingMachine(m);
                           setFormData({ name: m.name, type: m.type || 'CNC', status: m.status || 'RUNNING', plantId: m.plantId || 1 });
                           setModalOpen(true);
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 3 }}
                         title="Edit Machine"
                       >
-                        <Edit2 size={13} />
+                        <Edit2 size={12} />
+                        <span>Edit</span>
                       </button>
                       <button
                         type="button"
+                        className="action-btn action-btn-delete"
                         onClick={() => handleDelete(m.id, m.name)}
-                        style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 3 }}
                         title="Delete Machine"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </td>

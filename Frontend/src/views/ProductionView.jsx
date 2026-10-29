@@ -147,15 +147,32 @@ export default function ProductionView() {
     return matchesSearch;
   });
 
-  // Calculate machine volume breakdown for actual chart
-  const machineVolumes = machines.map(m => {
-    const machineBatches = production.filter(p => p.machineId === m.id);
+  // Calculate machine volume breakdown for actual chart & asset cards
+  const sortedMachineVolumes = [...machines].map(m => {
+    const machineBatches = production.filter(p => Number(p.machineId) === Number(m.id));
     const volume = machineBatches.reduce((sum, b) => sum + (b.quantityProduced || 0), 0);
     const scrap = machineBatches.reduce((sum, b) => sum + (b.quantityRejected || 0), 0);
-    return { id: m.id, name: m.name, volume, scrap };
-  }).filter(m => m.volume > 0);
+    const goodUnits = Math.max(0, volume - scrap);
+    const yieldRate = volume > 0 ? ((goodUnits / volume) * 100).toFixed(1) : '100.0';
+    return {
+      id: m.id,
+      name: m.name,
+      type: m.type || 'Industrial Asset',
+      status: m.status || 'ACTIVE',
+      volume,
+      scrap,
+      goodUnits,
+      yieldRate,
+      batchCount: machineBatches.length
+    };
+  }).sort((a, b) => b.volume - a.volume);
 
-  const maxVolume = Math.max(1, ...machineVolumes.map(m => m.volume));
+  const totalFleetVolume = sortedMachineVolumes.reduce((acc, m) => acc + m.volume, 0);
+  const totalFleetScrap = sortedMachineVolumes.reduce((acc, m) => acc + m.scrap, 0);
+  const fleetYield = totalFleetVolume > 0 
+    ? (((totalFleetVolume - totalFleetScrap) / totalFleetVolume) * 100).toFixed(1) 
+    : '100.0';
+  const maxMachineVolume = Math.max(1, ...sortedMachineVolumes.map(m => m.volume));
 
   return (
     <div style={{ padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -173,12 +190,14 @@ export default function ProductionView() {
         {hasRole(['ADMIN', 'ENGINEER']) && (
           <button 
             type="button" 
-            className="kyn-btn-primary" 
+            className="btn-record-batch" 
             onClick={handleOpenCreate}
-            style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem' }}
+            title="Schedule and record a new production batch"
           >
-            <Plus size={14} />
-            Record Batch
+            <span className="btn-record-batch-icon">
+              <Plus size={14} />
+            </span>
+            <span>Record Batch</span>
           </button>
         )}
       </div>
@@ -232,61 +251,136 @@ export default function ProductionView() {
         </div>
       </div>
 
-      {/* Machine Production Volume Comparison Chart */}
-      {machineVolumes.length > 0 && (
-        <div style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '1.25rem'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <div>
-              <h2 style={{ fontSize: '0.85rem', fontWeight: 600, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BarChart3 size={15} style={{ color: 'var(--accent-primary)' }} />
-                Manufactured Volume by Asset
-              </h2>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                Aggregated output and defect totals across factory machines
-              </span>
+      {/* Redesigned Manufactured Volume by Asset Section */}
+      <div className="asset-volume-container">
+        <div className="asset-volume-header">
+          <div className="asset-volume-title-group">
+            <div className="asset-volume-icon-badge">
+              <BarChart3 size={18} />
             </div>
-            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent-primary)' }} />
-                <span>Good Units</span>
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--danger)' }} />
-                <span>Defects</span>
-              </span>
+            <div>
+              <h2 className="asset-volume-title">Manufactured Volume by Asset</h2>
+              <div className="asset-volume-subtitle">
+                Live output metrics, first-pass yield and defect distribution across production cells
+              </div>
             </div>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {machineVolumes.map(mv => {
-              const goodUnits = Math.max(0, mv.volume - mv.scrap);
-              const goodPct = (goodUnits / maxVolume) * 100;
-              const scrapPct = (mv.scrap / maxVolume) * 100;
-              const machYield = mv.volume > 0 ? ((goodUnits / mv.volume) * 100).toFixed(1) : 100;
+          <div className="asset-volume-summary-pills">
+            <div className="asset-summary-pill">
+              <span>Fleet Output:</span>
+              <strong>{totalFleetVolume.toLocaleString()} units</strong>
+            </div>
+            <div className="asset-summary-pill">
+              <span>Fleet Yield:</span>
+              <strong style={{ color: '#10B981' }}>{fleetYield}%</strong>
+            </div>
+            <div className="asset-summary-pill">
+              <span>Producing Assets:</span>
+              <strong>{sortedMachineVolumes.filter(m => m.volume > 0).length} / {machines.length}</strong>
+            </div>
 
-              return (
-                <div key={mv.id}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '0.35rem' }}>
-                    <span style={{ fontWeight: 600, color: '#fff' }}>{mv.name}</span>
-                    <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>
-                      <strong style={{ color: '#fff' }}>{mv.volume.toLocaleString()}</strong> units ({machYield}% yield)
-                    </span>
-                  </div>
-                  <div style={{ height: 8, borderRadius: 4, background: '#131B28', overflow: 'hidden', display: 'flex' }}>
-                    <div style={{ width: `${goodPct}%`, background: 'var(--accent-primary)', transition: 'width 0.4s' }} />
-                    <div style={{ width: `${scrapPct}%`, background: 'var(--danger)', transition: 'width 0.4s' }} />
-                  </div>
-                </div>
-              );
-            })}
+            <div style={{ display: 'flex', gap: '10px', marginLeft: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: 'linear-gradient(90deg, #0066FF, #00D2FF)' }} />
+                <span>Passed</span>
+              </span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: '#EF4444' }} />
+                <span>Scrap</span>
+              </span>
+            </div>
           </div>
         </div>
-      )}
+
+        {/* Dynamic Asset Volume Grid */}
+        <div className="asset-volume-grid">
+          {sortedMachineVolumes.map((mv) => {
+            const goodPct = (mv.goodUnits / maxMachineVolume) * 100;
+            const scrapPct = (mv.scrap / maxMachineVolume) * 100;
+            const isHighYield = Number(mv.yieldRate) >= 95;
+            const hasBatches = mv.volume > 0;
+
+            return (
+              <div key={mv.id} className="asset-volume-card">
+                <div className="asset-card-top">
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span className="asset-tag">#00{mv.id}</span>
+                      <span className="asset-name">{mv.name}</span>
+                    </div>
+                    <div className="asset-type-badge">{mv.type}</div>
+                  </div>
+
+                  <div>
+                    <div className="asset-volume-value">
+                      {mv.volume.toLocaleString()} <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)' }}>units</span>
+                    </div>
+                    <div style={{ textAlign: 'right', marginTop: '2px' }}>
+                      <span 
+                        className={`badge ${isHighYield ? 'badge-online' : 'badge-warning'}`}
+                        style={{ fontSize: '10px', padding: '1px 6px' }}
+                      >
+                        <span className="badge-dot" />
+                        <span>{hasBatches ? `${mv.yieldRate}% Yield` : 'Standby'}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress bar track */}
+                <div className="asset-volume-track">
+                  {hasBatches ? (
+                    <>
+                      <div 
+                        className="asset-bar-good" 
+                        style={{ width: `${goodPct}%` }} 
+                        title={`Passed: ${mv.goodUnits.toLocaleString()} units`}
+                      />
+                      <div 
+                        className="asset-bar-scrap" 
+                        style={{ width: `${scrapPct}%` }} 
+                        title={`Scrap: ${mv.scrap} units`}
+                      />
+                    </>
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: 'rgba(255, 255, 255, 0.03)' }} />
+                  )}
+                </div>
+
+                {/* Metrics breakdown footer */}
+                <div className="asset-card-footer">
+                  <div className="asset-metric-chip">
+                    <span className="dot" style={{ background: '#38BDF8' }} />
+                    <span style={{ color: 'var(--text-secondary)' }}>Passed:</span>
+                    <strong style={{ color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>{mv.goodUnits.toLocaleString()}</strong>
+                  </div>
+
+                  <div className="asset-metric-chip">
+                    <span className="dot" style={{ background: mv.scrap > 0 ? '#EF4444' : 'var(--text-muted)' }} />
+                    <span style={{ color: 'var(--text-secondary)' }}>Scrap:</span>
+                    <strong style={{ color: mv.scrap > 0 ? '#EF4444' : 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
+                      {mv.scrap}
+                    </strong>
+                  </div>
+
+                  <div className="asset-metric-chip">
+                    <span style={{ color: 'var(--text-muted)' }}>Share:</span>
+                    <strong style={{ color: '#38BDF8', fontFamily: 'var(--font-mono)' }}>
+                      {totalFleetVolume > 0 ? ((mv.volume / totalFleetVolume) * 100).toFixed(0) : 0}%
+                    </strong>
+                  </div>
+
+                  <div className="asset-metric-chip">
+                    <span style={{ color: 'var(--text-muted)' }}>Batches:</span>
+                    <strong style={{ color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>{mv.batchCount}</strong>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Filter and Search Bar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
@@ -422,27 +516,27 @@ export default function ProductionView() {
                       <StatusBadge status={item.status} />
                     </td>
                     <td style={{ padding: '0.85rem 1rem', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                      <div className="action-btn-group">
                         {hasRole(['ADMIN', 'ENGINEER']) && (
                           <button
                             type="button"
-                            className="btn btn-ghost btn-sm"
-                            style={{ color: 'var(--text-secondary)', padding: '0.3rem' }}
+                            className="action-btn action-btn-edit"
                             onClick={() => handleOpenEdit(item)}
                             title="Edit Batch Record"
                           >
-                            <Edit2 size={13} />
+                            <Edit2 size={12} />
+                            <span>Edit</span>
                           </button>
                         )}
                         {hasRole('ADMIN') && (
                           <button
                             type="button"
-                            className="btn btn-ghost btn-sm"
-                            style={{ color: 'var(--text-muted)', padding: '0.3rem' }}
+                            className="action-btn action-btn-delete"
                             onClick={() => handleDelete(item.id)}
                             title="Delete Record (Admin Only)"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={12} />
+                            <span>Delete</span>
                           </button>
                         )}
                       </div>
@@ -462,11 +556,14 @@ export default function ProductionView() {
         title={editingItem ? `Edit Batch: ${editingItem.productName}` : 'Schedule Production Batch'}
         footer={
           <>
-            <button type="button" className="btn btn-ghost" onClick={() => setModalOpen(false)}>
+            <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
               Cancel
             </button>
-            <button type="button" className="kyn-btn-primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : editingItem ? 'Update Batch' : 'Dispatch Batch'}
+            <button type="button" className="btn-record-batch" onClick={handleSave} disabled={saving}>
+              <span className="btn-record-batch-icon">
+                {editingItem ? <Edit2 size={13} /> : <Plus size={13} />}
+              </span>
+              <span>{saving ? 'Saving...' : editingItem ? 'Update Batch' : 'Dispatch Batch'}</span>
             </button>
           </>
         }

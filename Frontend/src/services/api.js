@@ -174,8 +174,58 @@ export const dashboardApi = {
 };
 
 // ==========================================================
-// 3. Plant Service (:8082 via Gateway)
+// 3. Plant Service (:8082 via Gateway) + Cascading Offline State
 // ==========================================================
+
+export function getOfflinePlantIds() {
+  try {
+    const raw = localStorage.getItem('kynexis_offline_plants');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return [3]; // Chennai facility is offline by default in seed
+}
+
+export function setPlantOfflineState(plantId, isOffline) {
+  try {
+    const current = new Set(getOfflinePlantIds().map(Number));
+    if (isOffline) {
+      current.add(Number(plantId));
+    } else {
+      current.delete(Number(plantId));
+    }
+    const updated = Array.from(current);
+    localStorage.setItem('kynexis_offline_plants', JSON.stringify(updated));
+
+    // Update in-memory mockStore if present
+    if (mockStore && mockStore.data) {
+      const plant = mockStore.data.plants.find(p => p.id === Number(plantId));
+      if (plant) plant.active = !isOffline;
+
+      const machs = mockStore.data.machines.filter(m => Number(m.plantId) === Number(plantId) || Number(m.plant?.id) === Number(plantId));
+      const machIds = new Set(machs.map(m => m.id));
+      mockStore.data.machines.forEach(m => {
+        if (machIds.has(m.id)) {
+          m.status = isOffline ? 'OFFLINE' : 'RUNNING';
+        }
+      });
+      mockStore.data.sensors.forEach(s => {
+        if (machIds.has(Number(s.machineId))) {
+          s.active = !isOffline;
+        }
+      });
+    }
+
+    // Broadcast status change across all active React views
+    window.dispatchEvent(new CustomEvent('kynexis-plant-status-change', { 
+      detail: { plantId: Number(plantId), isOffline } 
+    }));
+    return updated;
+  } catch (err) {
+    console.error('Error updating plant offline status:', err);
+    return [];
+  }
+}
+
 export const plantsApi = {
   getAll: async (params = {}) => {
     if (isDemoMode()) {
@@ -219,6 +269,9 @@ export const plantsApi = {
   },
 
   update: async (id, plant) => {
+    if (plant.active !== undefined) {
+      setPlantOfflineState(id, plant.active === false);
+    }
     if (isDemoMode()) {
       const idx = mockStore.data.plants.findIndex(p => p.id === Number(id));
       if (idx !== -1) {
@@ -504,35 +557,57 @@ export const alertsApi = {
   },
 
   create: async (alert) => {
+    const alertType = alert.type || alert.alertType || 'HIGH_TEMPERATURE';
+    const payload = {
+      machineId: Number(alert.machineId || 1),
+      type: alertType,
+      alertType: alertType,
+      severity: alert.severity || 'WARNING',
+      message: (alert.message && alert.message.trim()) 
+        ? alert.message.trim() 
+        : `${alertType} anomaly detected on Machine #${alert.machineId || 1}`,
+      resolved: false
+    };
+
+    let result;
     if (isDemoMode()) {
       const created = {
         id: Math.max(0, ...mockStore.data.alerts.map(a => a.id)) + 1,
-        machineId: Number(alert.machineId),
-        alertType: alert.alertType || 'HIGH_TEMPERATURE',
-        severity: alert.severity || 'WARNING',
-        message: alert.message,
-        resolved: false,
+        ...payload,
         createdAt: new Date().toISOString()
       };
       mockStore.data.alerts.unshift(created);
-      return created;
+      result = created;
+    } else {
+      result = await request('/api/alerts', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
     }
-    return await request('/api/alerts', {
-      method: 'POST',
-      body: JSON.stringify(alert)
-    });
+
+    try {
+      window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'created', alert: result } }));
+    } catch {}
+    return result;
   },
 
   acknowledge: async (id) => {
+    let result;
     if (isDemoMode()) {
       const a = mockStore.data.alerts.find(item => item.id === Number(id));
       if (a) a.acknowledged = true;
-      return a;
+      result = a;
+    } else {
+      result = await request(`/api/alerts/${id}/acknowledge`, { method: 'PUT' });
     }
-    return await request(`/api/alerts/${id}/acknowledge`, { method: 'PUT' });
+    try {
+      window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'acknowledged', id } }));
+    } catch {}
+    return result;
   },
 
   resolve: async (id, resolutionNotes = 'Resolved by operator') => {
+    let result;
     if (isDemoMode()) {
       const a = mockStore.data.alerts.find(item => item.id === Number(id));
       if (a) {
@@ -540,12 +615,17 @@ export const alertsApi = {
         a.resolvedAt = new Date().toISOString();
         a.resolutionNotes = resolutionNotes;
       }
-      return a;
+      result = a;
+    } else {
+      result = await request(`/api/alerts/${id}/resolve`, {
+        method: 'PUT',
+        body: JSON.stringify({ resolutionNotes })
+      });
     }
-    return await request(`/api/alerts/${id}/resolve`, {
-      method: 'PUT',
-      body: JSON.stringify({ resolutionNotes })
-    });
+    try {
+      window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'resolved', id } }));
+    } catch {}
+    return result;
   }
 };
 

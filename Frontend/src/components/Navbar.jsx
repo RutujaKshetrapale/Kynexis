@@ -46,6 +46,7 @@ export default function Navbar({ selectedPlant, setSelectedPlant, activeTab }) {
 
   const pageMeta = {
     dashboard: { title: 'Dashboard', sub: 'Factory Overview' },
+    'digital-twin': { title: 'AI Digital Twin', sub: 'Interactive 3D factory layout, real-time telemetry and what-if simulation' },
     plants: { title: 'Plants', sub: 'Manage and monitor all your facilities' },
     machines: { title: 'Machines', sub: 'All machines across selected plant' },
     sensors: { title: 'Sensors', sub: 'Live sensor data and conditions' },

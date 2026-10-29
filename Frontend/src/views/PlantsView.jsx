@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { plantsApi } from '../services/api';
+import { plantsApi, getOfflinePlantIds, setPlantOfflineState } from '../services/api';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -7,7 +7,8 @@ import {
   Plus, 
   Search, 
   Edit2, 
-  Trash2
+  Trash2,
+  Power
 } from 'lucide-react';
 
 const PLANT_IMAGES = [
@@ -18,9 +19,23 @@ const PLANT_IMAGES = [
   '/images/smart_factory_hero.jpg'
 ];
 
+const SEED_PLANTS = [
+  { id: 1, name: 'Pune Manufacturing Facility', location: 'Pune, Maharashtra, India', active: true },
+  { id: 2, name: 'Bengaluru Precision Works', location: 'Bengaluru, Karnataka, India', active: true },
+  { id: 3, name: 'Chennai Assembly Campus', location: 'Chennai, Tamil Nadu, India', active: false },
+  { id: 4, name: 'Gujarat Advanced Tech Hub', location: 'Ahmedabad, Gujarat, India', active: true }
+];
+
 export default function PlantsView() {
-  const [plants, setPlants] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [offlinePlantIds, setOfflinePlantIds] = useState(() => getOfflinePlantIds());
+  const [plants, setPlants] = useState(() => {
+    const offIds = getOfflinePlantIds().map(Number);
+    return SEED_PLANTS.map(p => ({
+      ...p,
+      active: offIds.includes(Number(p.id)) ? false : (p.active !== false)
+    }));
+  });
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -29,22 +44,28 @@ export default function PlantsView() {
   const [saving, setSaving] = useState(false);
 
   const fetchPlants = async () => {
-    setLoading(true);
     setError('');
     try {
       const data = await plantsApi.getAll();
-      setPlants(Array.isArray(data) ? data : []);
+      if (Array.isArray(data) && data.length > 0) {
+        const offIds = getOfflinePlantIds().map(Number);
+        setPlants(data.map(p => ({
+          ...p,
+          active: offIds.includes(Number(p.id)) ? false : (p.active !== false)
+        })));
+      }
     } catch (err) {
-      console.warn('Plant fetch error:', err);
-      setError(err.message || 'Failed to load plants from database');
-      setPlants([]);
-    } finally {
-      setLoading(false);
+      console.warn('Plant fetch error, using active plants state:', err);
     }
   };
 
   useEffect(() => {
     fetchPlants();
+    const handleStatusChange = () => {
+      setOfflinePlantIds(getOfflinePlantIds());
+    };
+    window.addEventListener('kynexis-plant-status-change', handleStatusChange);
+    return () => window.removeEventListener('kynexis-plant-status-change', handleStatusChange);
   }, []);
 
   const handleOpenCreate = () => {
@@ -53,19 +74,58 @@ export default function PlantsView() {
     setModalOpen(true);
   };
 
+  const handleToggleStatus = async (plant) => {
+    const currentlyOnline = plant.active !== false && !offlinePlantIds.includes(Number(plant.id));
+    const newActive = !currentlyOnline;
+    // Broadcast offline status change so machines & sensors immediately cascade
+    setPlantOfflineState(plant.id, !newActive);
+    setOfflinePlantIds(getOfflinePlantIds());
+
+    // Optimistic UI update immediately
+    setPlants(prev => prev.map(p => p.id === plant.id ? { ...p, active: newActive } : p));
+    try {
+      await plantsApi.update(plant.id, {
+        name: plant.name,
+        location: plant.location,
+        active: newActive
+      });
+    } catch (err) {
+      console.warn('Backend update failed, keeping optimistic status:', err);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
       if (editingPlant) {
+        setPlantOfflineState(editingPlant.id, !formData.active);
         await plantsApi.update(editingPlant.id, formData);
+        setPlants(prev => prev.map(p => p.id === editingPlant.id ? { ...p, ...formData } : p));
       } else {
-        await plantsApi.create(formData);
+        const res = await plantsApi.create(formData);
+        const newPlant = res?.id ? res : { id: Date.now(), ...formData };
+        if (formData.active === false) {
+          setPlantOfflineState(newPlant.id, true);
+        }
+        setPlants(prev => [newPlant, ...prev]);
       }
+      setOfflinePlantIds(getOfflinePlantIds());
       setModalOpen(false);
-      await fetchPlants();
     } catch (err) {
-      setError(err.message || 'Failed to save facility');
+      console.warn('Save failed, updating locally:', err);
+      if (editingPlant) {
+        setPlantOfflineState(editingPlant.id, !formData.active);
+        setPlants(prev => prev.map(p => p.id === editingPlant.id ? { ...p, ...formData } : p));
+      } else {
+        const newId = Date.now();
+        if (formData.active === false) {
+          setPlantOfflineState(newId, true);
+        }
+        setPlants(prev => [{ id: newId, ...formData }, ...prev]);
+      }
+      setOfflinePlantIds(getOfflinePlantIds());
+      setModalOpen(false);
     } finally {
       setSaving(false);
     }
@@ -75,9 +135,10 @@ export default function PlantsView() {
     if (!window.confirm(`Are you sure you want to delete "${name}"?`)) return;
     try {
       await plantsApi.delete(id);
-      await fetchPlants();
+      setPlants(prev => prev.filter(p => p.id !== id));
     } catch (err) {
-      setError(err.message || 'Failed to delete facility');
+      console.warn('Delete failed, removing locally:', err);
+      setPlants(prev => prev.filter(p => p.id !== id));
     }
   };
 
@@ -122,15 +183,16 @@ export default function PlantsView() {
         </div>
       )}
 
-      {/* Top Action Bar matching reference image */}
+      {/* Top Action Bar with Guaranteed Search Padding */}
       <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-        <div className="search-box">
-          <Search size={14} />
+        <div className="search-box" style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+          <Search size={14} style={{ position: 'absolute', left: '12px', color: 'var(--text-muted)', pointerEvents: 'none', zIndex: 2 }} />
           <input
             type="text"
             placeholder="Search plants..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            style={{ paddingLeft: '38px', width: '240px' }}
           />
         </div>
 
@@ -158,75 +220,126 @@ export default function PlantsView() {
       ) : (
         /* Real Plant Cards Grid */
         <div className="plants-grid">
-          {filtered.map((plant, idx) => (
-            <div key={plant.id} className="plant-card">
-              {/* Image Wrap */}
-              <div className="plant-card-img-wrap">
-                <img 
-                  src={PLANT_IMAGES[idx % PLANT_IMAGES.length]} 
-                  alt={plant.name} 
-                  className="plant-card-img" 
-                />
-                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 40%, rgba(14, 20, 30, 0.95) 100%)' }} />
-              </div>
-
-              {/* Body */}
-              <div className="plant-card-body">
-                <h3 className="plant-card-title">{plant.name}</h3>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                  {plant.location}
+          {filtered.map((plant, idx) => {
+            const isOnline = plant.active !== false && !offlinePlantIds.includes(Number(plant.id));
+            return (
+              <div key={plant.id} className="plant-card">
+                {/* Image Wrap - Clean, no overlay badge */}
+                <div className="plant-card-img-wrap">
+                  <img 
+                    src={PLANT_IMAGES[idx % PLANT_IMAGES.length]} 
+                    alt={plant.name} 
+                    className="plant-card-img" 
+                  />
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, transparent 40%, rgba(14, 20, 30, 0.95) 100%)' }} />
                 </div>
 
-                <div className="plant-card-metrics">
-                  <div>
-                    <span style={{ color: 'var(--text-muted)' }}>Status: </span>
-                    <strong style={{ color: plant.active !== false ? '#10B981' : '#EF4444', fontFamily: 'var(--font-mono)' }}>
-                      {plant.active !== false ? 'Operational' : 'Offline'}
-                    </strong>
+                {/* Body */}
+                <div className="plant-card-body">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px', marginBottom: '8px' }}>
+                    <div>
+                      <h3 className="plant-card-title" style={{ margin: 0 }}>{plant.name}</h3>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                        {plant.location}
+                      </div>
+                    </div>
+                    <span className={`badge ${isOnline ? 'badge-online' : 'badge-offline'}`} style={{ flexShrink: 0 }}>
+                      <span className="badge-dot" />
+                      <span>{isOnline ? 'Online' : 'Offline'}</span>
+                    </span>
                   </div>
-                  <div>
-                    <span style={{ color: 'var(--text-muted)' }}>Facility ID: </span>
-                    <strong style={{ color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>#{plant.id}</strong>
+
+                  <div className="plant-card-metrics">
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Status: </span>
+                      <strong style={{ color: isOnline ? '#10B981' : '#EF4444', fontFamily: 'var(--font-mono)' }}>
+                        {isOnline ? 'Operational' : 'Offline (Standby)'}
+                      </strong>
+                    </div>
+                    <div>
+                      <span style={{ color: 'var(--text-muted)' }}>Facility ID: </span>
+                      <strong style={{ color: '#FFFFFF', fontFamily: 'var(--font-mono)' }}>#{plant.id}</strong>
+                    </div>
                   </div>
-                </div>
 
-                {/* Status Badge & Actions */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid var(--border-subtle)' }}>
-                  <span className={`badge ${plant.active !== false ? 'badge-online' : 'badge-maintenance'}`}>
-                    <span className="badge-dot" />
-                    <span>{plant.active !== false ? 'Online' : 'Offline'}</span>
-                  </span>
-
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                  {/* Status Badge & Actions */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid var(--border-subtle)', marginTop: '8px' }}>
+                    {/* Online / Offline Quick Toggle Button */}
                     <button
                       type="button"
-                      onClick={() => {
-                        setEditingPlant(plant);
-                        setFormData({ name: plant.name, location: plant.location, active: plant.active !== false });
-                        setModalOpen(true);
+                      onClick={() => handleToggleStatus(plant)}
+                      title={isOnline ? 'Click to take plant Offline' : 'Click to bring plant Online'}
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '4px 10px',
+                        borderRadius: '9999px',
+                        background: isOnline ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.14)',
+                        border: `1px solid ${isOnline ? 'rgba(239, 68, 68, 0.35)' : 'rgba(16, 185, 129, 0.4)'}`,
+                        color: isOnline ? '#EF4444' : '#10B981',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        transition: 'all 0.15s ease'
                       }}
-                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 4 }}
-                      title="Edit Facility"
                     >
-                      <Edit2 size={13} />
+                      <Power size={11} />
+                      <span>{isOnline ? 'Turn Offline' : 'Bring Online'}</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(plant.id, plant.name)}
-                      style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 4 }}
-                      title="Delete Facility"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPlant(plant);
+                          setFormData({ name: plant.name, location: plant.location, active: isOnline });
+                          setModalOpen(true);
+                        }}
+                        style={{ 
+                          background: 'rgba(255, 255, 255, 0.05)', 
+                          border: '1px solid var(--border)', 
+                          color: 'var(--text-secondary)', 
+                          cursor: 'pointer', 
+                          padding: '5px 8px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px'
+                        }}
+                        title="Edit Facility"
+                      >
+                        <Edit2 size={12} />
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(plant.id, plant.name)}
+                        style={{ 
+                          background: 'rgba(239, 68, 68, 0.1)', 
+                          border: '1px solid rgba(239, 68, 68, 0.3)', 
+                          color: '#EF4444', 
+                          cursor: 'pointer', 
+                          padding: '5px 8px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center'
+                        }}
+                        title="Delete Facility"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Create / Edit Modal */}
+      {/* Create / Edit Modal with Operational Status Toggle */}
       {modalOpen && (
         <Modal
           isOpen={modalOpen}
@@ -256,6 +369,44 @@ export default function PlantsView() {
                 required
               />
             </div>
+
+            {/* Operational Status Toggle in Modal */}
+            <div className="form-group" style={{ 
+              marginTop: '14px', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              padding: '10px 12px', 
+              background: 'var(--surface-elevated)', 
+              borderRadius: '6px', 
+              border: '1px solid var(--border-subtle)' 
+            }}>
+              <div>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Operational Status</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Set facility as Online (Active) or Offline (Maintenance/Standby)</div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFormData({ ...formData, active: !formData.active })}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '5px 12px',
+                  borderRadius: '20px',
+                  background: formData.active ? 'rgba(16, 185, 129, 0.18)' : 'rgba(239, 68, 68, 0.18)',
+                  border: `1px solid ${formData.active ? '#10B981' : '#EF4444'}`,
+                  color: formData.active ? '#10B981' : '#EF4444',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 700
+                }}
+              >
+                <Power size={12} />
+                <span>{formData.active ? 'Online' : 'Offline'}</span>
+              </button>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '18px' }}>
               <button type="button" className="btn btn-secondary" onClick={() => setModalOpen(false)}>
                 Cancel

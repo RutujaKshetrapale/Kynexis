@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { sensorsApi, machinesApi } from '../services/api';
+import { sensorsApi, machinesApi, getOfflinePlantIds } from '../services/api';
 import Modal from '../components/Modal';
 import LoadingSpinner from '../components/LoadingSpinner';
 import EmptyState from '../components/EmptyState';
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function SensorsView() {
+  const [offlinePlantIds, setOfflinePlantIds] = useState(() => getOfflinePlantIds());
   const [sensors, setSensors] = useState([]);
   const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -51,6 +52,11 @@ export default function SensorsView() {
 
   useEffect(() => {
     fetchSensors();
+    const handleStatusChange = () => {
+      setOfflinePlantIds(getOfflinePlantIds());
+    };
+    window.addEventListener('kynexis-plant-status-change', handleStatusChange);
+    return () => window.removeEventListener('kynexis-plant-status-change', handleStatusChange);
   }, []);
 
   const handleOpenCreate = () => {
@@ -100,6 +106,19 @@ export default function SensorsView() {
   const getMachineName = (machineId) => {
     const found = machines.find(m => Number(m.id) === Number(machineId));
     return found ? found.name : `Machine #${machineId}`;
+  };
+
+  const isSensorInOfflinePlant = (sensor) => {
+    const machine = machines.find(m => Number(m.id) === Number(sensor.machineId));
+    if (!machine) return false;
+    const plantId = Number(machine.plantId || machine.plant?.id);
+    return offlinePlantIds.includes(plantId);
+  };
+
+  const isSensorActive = (sensor) => {
+    if (sensor.active === false) return false;
+    if (isSensorInOfflinePlant(sensor)) return false;
+    return true;
   };
 
   return (
@@ -330,32 +349,51 @@ export default function SensorsView() {
                     {s.unit}
                   </td>
                   <td>
-                    <span className={`badge ${s.active !== false ? 'badge-online' : 'badge-maintenance'}`}>
-                      <span className="badge-dot" />
-                      <span>{s.active !== false ? 'Online & Streaming' : 'Offline'}</span>
-                    </span>
+                    {(() => {
+                      const plantOffline = isSensorInOfflinePlant(s);
+                      const active = isSensorActive(s);
+                      if (!active) {
+                        return (
+                          <span 
+                            className="badge badge-offline" 
+                            title={plantOffline ? 'Sensor offline: Host plant facility is offline' : 'Sensor offline'}
+                          >
+                            <span className="badge-dot" />
+                            <span>{plantOffline ? 'Offline (Plant Offline)' : 'Offline'}</span>
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="badge badge-online">
+                          <span className="badge-dot" />
+                          <span>Online & Streaming</span>
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td style={{ textAlign: 'right' }}>
-                    <div style={{ display: 'inline-flex', gap: '8px' }}>
+                    <div className="action-btn-group">
                       <button
                         type="button"
+                        className="action-btn action-btn-edit"
                         onClick={() => {
                           setEditingSensor(s);
                           setFormData({ name: s.name, type: s.type, unit: s.unit, machineId: s.machineId || 1, active: s.active !== false });
                           setModalOpen(true);
                         }}
-                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 3 }}
                         title="Edit Sensor"
                       >
-                        <Edit2 size={13} />
+                        <Edit2 size={12} />
+                        <span>Edit</span>
                       </button>
                       <button
                         type="button"
+                        className="action-btn action-btn-delete"
                         onClick={() => handleDelete(s.id, s.name)}
-                        style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: 3 }}
                         title="Delete Sensor"
                       >
-                        <Trash2 size={13} />
+                        <Trash2 size={12} />
+                        <span>Delete</span>
                       </button>
                     </div>
                   </td>
