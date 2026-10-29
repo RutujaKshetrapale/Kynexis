@@ -2,15 +2,14 @@
   "name": "kynexis",
   "version": "1.0.0",
   "private": true,
-  "description": "Kynexis Smart Factory Platform - Microservices & Digital Twin",
-  "type": "module",
+  "description": "Kynexis Smart Factory Platform",
   "scripts": {
-    "dev": "node scripts/dev.js",
-    "dev:backend": "node scripts/dev.js --backend-only",
-    "dev:frontend": "node scripts/dev.js --frontend-only",
-    "start": "node scripts/dev.js",
-    "status": "powershell -ExecutionPolicy Bypass -File ./scripts/dev-status.ps1",
-    "stop": "node scripts/stop.js",
+    "dev": "concurrently -k \"npm:backend\" \"npm:frontend\"",
+    "backend": "concurrently -k -p \"[{name}]\" -n \"GATEWAY,AUTH,PLANT,MACHINE,SENSOR,TELEM,ALERT,MAINT,PROD,ENERGY\" -c \"cyan,blue,green,magenta,yellow,blueBright,red,magentaBright,greenBright,yellowBright\" \"java -jar Backend/api-gateway/target/api-gateway-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/authentication-service/target/authentication-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/plant-service/target/plant-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/machine-service/target/machine-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/sensor-service/target/sensor-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/telemetry-service/target/telemetry-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/alert-service/target/alert-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/maintenance-service/target/maintenance-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/production-service/target/production-service-0.0.1-SNAPSHOT.jar\" \"java -jar Backend/energy-service/target/energy-service-0.0.1-SNAPSHOT.jar\"",
+    "frontend": "npm run dev --prefix Frontend",
     "build": "npm run build --prefix Frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }

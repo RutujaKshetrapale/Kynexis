@@ -4,13 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node ../scripts/dev.js",
-    "dev:ui": "vite",
-    "dev:standalone": "vite",
+    "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview",
-    "stop": "node ../scripts/stop.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^1.59.0",
