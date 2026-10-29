@@ -755,7 +755,7 @@ The migration from monolith to microservices follows the **Strangler Fig Applica
 - **Deliverables**:
   - `BoundedContext` catalog and `DomainBoundary` annotations established;
   - `MachineQueryContract` interface and `MachineSummaryDTO` implemented in `MachineService`;
-  - Complete architecture documentation (`PHASE_21_MICROSERVICES_ARCHITECTURE.md`);
+  - Complete architecture documentation (`microservices-architecture.md`);
   - Architectural verification test suite (`BoundedContextDefinitionTest`, `MachineQueryContractTest`, `DomainBoundaryMappingTest`).
 - **Dependencies**: None. Monolith runtime and database untouched.
 - **Rollback Consideration**: Purely additive code changes; zero risk to runtime behavior.

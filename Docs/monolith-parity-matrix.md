@@ -130,7 +130,7 @@ Each feature is classified under one of four status categories:
 | **Port Allocation** | Gateway: `8080`<br>Monolith: `8090` | Verified: Monolith configured on `server.port=${SERVER_PORT:8090}` in `Backend/SpringBoot-Factory-Application/src/main/resources/application.properties`. Zero conflict on port 8080. |
 | **JWT Secrets & Issuer** | Unified across all services | Verified: Unified on `${JWT_SECRET}` (with 256-bit requirement), `${JWT_ISSUER:kynexis}`, and `${JWT_AUDIENCE:kynexis-api}` with production fail-secure check. Verified by 6 `JwtServiceTest` cases. |
 | **Internal Security** | Protected via `X-Internal-Secret` | Verified: `InternalSecurityFilter` uses constant-time `MessageDigest.isEqual`. Spoofed external headers are blocked; authorized internal callers receive access. Verified by `InternalSecurityFilterTest` and `InternalSecurityControllerTest`. |
-| **Database Ownership** | Documented & enforced | Verified: `Docs/DATABASE_OWNERSHIP.md` defines clear table ownership per service. Zero cross-service JPA relationships. All services enforce `ddl-auto=none`. |
+| **Database Ownership** | Documented & enforced | Verified: `Docs/database-ownership.md` defines clear table ownership per service. Zero cross-service JPA relationships. All services enforce `ddl-auto=none`. |
 | **Kafka Dual-Write & Outbox** | Transactional Outbox implemented | Verified: `OutboxEvent` and `OutboxPublisherService` in `telemetry-service` save outbox records within the database transaction, dispatching via `afterCommit` and `@Scheduled` crash recovery. Verified by `OutboxPublisherServiceTest`. |
 | **Kafka Consumer Idempotency & DLQ** | Deduplication & DLQ implemented | Verified: `ProcessedEvent` table tracks processed `eventId`s in `alert-service`. `DefaultErrorHandler` configured with 3-attempt backoff and Dead Letter Queue (`kynexis.machine-telemetry.DLT`). Verified by `TelemetryEventConsumerTest`. |
 | **Docker Compose** | Complete compose setup | Verified: Root `docker-compose.yml` orchestrates MySQL 8.0, Redis 7, Kafka KRaft, and all 8 application microservices with healthchecks and container DNS networking. |
@@ -150,6 +150,6 @@ Each feature is classified under one of four status categories:
 4. **C1: Resolve Port Conflicts**: Completed & verified (Monolith moved to port 8090; Gateway exclusively on 8080).
 5. **C2 & C3: Unify Security**: Completed & verified (Unified JWT secret/issuer/audience across 8 services; Gateway strips untrusted headers and injects `X-Internal-Secret`; internal endpoints require authentication).
 6. **D1 & D2: Inter-Service Resiliency & Kafka Outbox**: Completed & verified (`RestClientHelper` with connection/read timeouts; Transactional Outbox in `telemetry-service`; idempotency and DLQ error handling in `alert-service`).
-7. **E: Database Ownership**: Completed & verified (`Docs/DATABASE_OWNERSHIP.md` and updated `Database/mysql/schema.sql`).
+7. **E: Database Ownership**: Completed & verified (`Docs/database-ownership.md` and updated `Database/mysql/schema.sql`).
 8. **G: Docker Compose**: Completed & verified (Root `docker-compose.yml` with healthchecks, DNS URLs, and container definitions).
 9. **H: Build & Test Verification**: Full Maven reactor build passed (11/11 modules, 731 tests passed, 0 failures, 0 errors).
