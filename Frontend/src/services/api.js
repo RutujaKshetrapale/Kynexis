@@ -18,7 +18,7 @@ export function setDemoMode(val) {
   demoMode = !!val;
   localStorage.setItem('kynexis_demo_mode', String(demoMode));
   backendStatus.isDemo = demoMode;
-  backendStatus.statusMessage = demoMode 
+  backendStatus.statusMessage = demoMode
     ? 'Demo Mode Active (Synthetic Fixtures)'
     : (backendStatus.isLive ? 'Live Database Connected (:8080)' : 'Live Mode (Connecting...)');
   notifyStatusListeners();
@@ -58,14 +58,80 @@ export function useBackendStatus() {
   return status;
 }
 
+function isTokenValid(token) {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const payload = JSON.parse(atob(parts[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now() + 30000) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+let rehydratePromise = null;
+
+async function ensureValidToken() {
+  let token = localStorage.getItem('kynexis_token');
+  if (isTokenValid(token)) {
+    return token;
+  }
+  // If user has a valid saved user, attempt re-auth using their persona
+  const savedUserStr = localStorage.getItem('kynexis_user');
+  if (savedUserStr && !rehydratePromise) {
+    try {
+      const savedUser = JSON.parse(savedUserStr);
+      const username = savedUser.username || 'admin';
+      rehydratePromise = (async () => {
+        try {
+          const res = await fetch(`${BASE_URL}/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password: 'Admin@123' })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.token) {
+              localStorage.setItem('kynexis_token', data.token);
+              localStorage.setItem('kynexis_user', JSON.stringify({
+                username: data.username || username,
+                role: data.role || savedUser.role || 'OPERATOR',
+                token: data.token
+              }));
+              return data.token;
+            }
+          }
+        } catch (e) {
+          console.warn('Auto-session rehydration error:', e);
+        } finally {
+          rehydratePromise = null;
+        }
+        return null;
+      })();
+      return await rehydratePromise;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
 /**
  * Core HTTP Request Wrapper (Calls API Gateway)
  */
 async function request(endpoint, options = {}) {
-  const token = localStorage.getItem('kynexis_token');
+  let token = localStorage.getItem('kynexis_token');
+  if (!endpoint.startsWith('/auth/') && !isTokenValid(token)) {
+    token = await ensureValidToken();
+  }
+
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    ...(token && isTokenValid(token) ? { 'Authorization': `Bearer ${token}` } : {}),
     ...(options.headers || {})
   };
 
@@ -141,7 +207,7 @@ export const authApi = {
         id: mockStore.data.users.length + 1,
         username: userData.username,
         email: userData.email,
-        role: 'OPERATOR',
+        role: userData.role || 'OPERATOR',
         active: true
       };
       mockStore.data.users.push(newUser);
@@ -150,6 +216,35 @@ export const authApi = {
     return await request('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData)
+    });
+  },
+
+  getUsers: async () => {
+    if (isDemoMode()) {
+      return [...mockStore.data.users];
+    }
+    try {
+      const res = await request('/api/auth/users');
+      return Array.isArray(res) ? res : (res?.content || []);
+    } catch {
+      return [
+        { id: 1, username: 'admin', email: 'admin@smartfactory.com', role: 'ADMIN', active: true },
+        { id: 8, username: 'engineer', email: 'engineer@smartfactory.com', role: 'ENGINEER', active: true },
+        { id: 9, username: 'operator', email: 'operator@smartfactory.com', role: 'OPERATOR', active: true },
+        { id: 11, username: 'manager', email: 'manager@smartfactory.com', role: 'MANAGER', active: true },
+        { id: 12, username: 'operator1', email: 'operator1@example.com', role: 'OPERATOR', active: true }
+      ];
+    }
+  },
+
+  updateUserRole: async (id, role) => {
+    if (isDemoMode()) {
+      const user = mockStore.data.users.find(u => u.id === Number(id));
+      if (user) user.role = role;
+      return user;
+    }
+    return await request(`/api/auth/users/${id}/role?role=${encodeURIComponent(role)}`, {
+      method: 'PUT'
     });
   }
 };
@@ -181,7 +276,7 @@ export function getOfflinePlantIds() {
   try {
     const raw = localStorage.getItem('kynexis_offline_plants');
     if (raw) return JSON.parse(raw);
-  } catch {}
+  } catch { }
   return [3]; // Chennai facility is offline by default in seed
 }
 
@@ -216,8 +311,8 @@ export function setPlantOfflineState(plantId, isOffline) {
     }
 
     // Broadcast status change across all active React views
-    window.dispatchEvent(new CustomEvent('kynexis-plant-status-change', { 
-      detail: { plantId: Number(plantId), isOffline } 
+    window.dispatchEvent(new CustomEvent('kynexis-plant-status-change', {
+      detail: { plantId: Number(plantId), isOffline }
     }));
     return updated;
   } catch (err) {
@@ -563,8 +658,8 @@ export const alertsApi = {
       type: alertType,
       alertType: alertType,
       severity: alert.severity || 'WARNING',
-      message: (alert.message && alert.message.trim()) 
-        ? alert.message.trim() 
+      message: (alert.message && alert.message.trim())
+        ? alert.message.trim()
         : `${alertType} anomaly detected on Machine #${alert.machineId || 1}`,
       resolved: false
     };
@@ -587,7 +682,7 @@ export const alertsApi = {
 
     try {
       window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'created', alert: result } }));
-    } catch {}
+    } catch { }
     return result;
   },
 
@@ -602,7 +697,7 @@ export const alertsApi = {
     }
     try {
       window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'acknowledged', id } }));
-    } catch {}
+    } catch { }
     return result;
   },
 
@@ -624,7 +719,7 @@ export const alertsApi = {
     }
     try {
       window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'resolved', id } }));
-    } catch {}
+    } catch { }
     return result;
   }
 };

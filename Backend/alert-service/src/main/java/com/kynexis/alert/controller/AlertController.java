@@ -34,7 +34,7 @@ public class AlertController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER', 'OPERATOR')")
     public ResponseEntity<AlertDTO> create(@Valid @RequestBody AlertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(alertService.create(request));
     }
@@ -126,7 +126,7 @@ public class AlertController {
     }
 
     @PutMapping("/{id}/resolve")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER', 'OPERATOR', 'MANAGER')")
     public ResponseEntity<AlertDTO> resolve(@PathVariable Long id) {
         return ResponseEntity.ok(alertService.resolveAlert(id));
     }

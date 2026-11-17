@@ -27,7 +27,7 @@ public class PlantController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PlantDTO> create(@Valid @RequestBody PlantRequest request) {
         PlantDTO plant = plantService.create(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(plant);
@@ -86,7 +86,7 @@ public class PlantController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PlantDTO> update(@PathVariable Long id, @Valid @RequestBody PlantRequest request) {
         return ResponseEntity.ok(plantService.update(id, request));
     }

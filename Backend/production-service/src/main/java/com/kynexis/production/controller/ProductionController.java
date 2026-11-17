@@ -36,7 +36,7 @@ public class ProductionController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER', 'OPERATOR')")
     public ResponseEntity<ProductionDTO> create(@Valid @RequestBody ProductionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productionService.create(request));
     }
@@ -110,7 +110,7 @@ public class ProductionController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER', 'OPERATOR')")
     public ResponseEntity<ProductionDTO> update(@PathVariable Long id, @Valid @RequestBody ProductionRequest request) {
         return ResponseEntity.ok(productionService.update(id, request));
     }

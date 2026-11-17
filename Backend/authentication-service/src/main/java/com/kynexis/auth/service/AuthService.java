@@ -47,11 +47,20 @@ public class AuthService {
             throw new BusinessValidationException("EMAIL ALREADY EXISTS: " + request.getEmail());
         }
 
+        Role userRole = Role.OPERATOR;
+        if (request.getRole() != null && !request.getRole().isBlank()) {
+            try {
+                userRole = Role.valueOf(request.getRole().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid role '{}' specified, defaulting to OPERATOR", request.getRole());
+            }
+        }
+
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(Role.OPERATOR)
+                .role(userRole)
                 .active(true)
                 .build();
 
@@ -94,6 +103,38 @@ public class AuthService {
                 .token(token)
                 .username(user.getUsername())
                 .role(user.getRole().name())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.List<UserResponse> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(u -> UserResponse.builder()
+                        .id(u.getId())
+                        .username(u.getUsername())
+                        .email(u.getEmail())
+                        .role(u.getRole().name())
+                        .active(u.isActive())
+                        .build())
+                .toList();
+    }
+
+    @Transactional
+    public UserResponse updateUserRole(Long id, String roleName) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new BusinessValidationException("User not found with id: " + id));
+        try {
+            user.setRole(Role.valueOf(roleName.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new BusinessValidationException("Invalid role: " + roleName);
+        }
+        User saved = userRepository.save(user);
+        return UserResponse.builder()
+                .id(saved.getId())
+                .username(saved.getUsername())
+                .email(saved.getEmail())
+                .role(saved.getRole().name())
+                .active(saved.isActive())
                 .build();
     }
 }

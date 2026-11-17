@@ -36,4 +36,16 @@ public class AuthController {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/users")
+    public ResponseEntity<java.util.List<UserResponse>> getAllUsers() {
+        return ResponseEntity.ok(authService.getAllUsers());
+    }
+
+    @org.springframework.web.bind.annotation.PutMapping("/users/{id}/role")
+    public ResponseEntity<UserResponse> updateUserRole(
+            @org.springframework.web.bind.annotation.PathVariable Long id,
+            @org.springframework.web.bind.annotation.RequestParam String role) {
+        return ResponseEntity.ok(authService.updateUserRole(id, role));
+    }
 }

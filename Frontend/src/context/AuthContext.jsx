@@ -6,28 +6,104 @@ import { authApi } from '../services/api';
 const AuthContext = createContext(null);
 
 export const SEED_USERS = [
-  { username: 'admin', password: 'Admin@123', role: 'ADMIN', label: 'System Admin', desc: 'Full System & Deletion Rights' },
-  { username: 'engineer', password: 'engineer123', role: 'ENGINEER', label: 'Lead Engineer', desc: 'Plant/Machine/Telemetry Ops' },
-  { username: 'operator', password: 'operator123', role: 'OPERATOR', label: 'Floor Operator', desc: 'Telemetry Feeds & Viewing' },
-  { username: 'manager', password: 'Manager@123', role: 'MANAGER', label: 'Plant Manager', desc: 'Audits & KPI Dashboards' }
+  {
+    username: 'admin',
+    password: 'Admin@123',
+    role: 'ADMIN',
+    label: 'System Admin',
+    title: 'Enterprise Administrator',
+    color: '#F2C811',
+    bgColor: 'rgba(242, 200, 17, 0.08)',
+    borderColor: 'rgba(242, 200, 17, 0.35)',
+    glowColor: 'rgba(242, 200, 17, 0.25)',
+    desc: 'Full platform governance, node provisioning, microservice configurations & security administration.',
+    permissions: [
+      'Full Read, Write & Delete Access',
+      'Plant & Machine Provisioning',
+      'Alert Resolution & Dismissal',
+      'System Security & RBAC Policies'
+    ]
+  },
+  {
+    username: 'manager',
+    password: 'Admin@123',
+    role: 'MANAGER',
+    label: 'Plant Manager',
+    title: 'Operations & Production Manager',
+    color: '#A855F7',
+    bgColor: 'rgba(168, 85, 247, 0.08)',
+    borderColor: 'rgba(168, 85, 247, 0.35)',
+    glowColor: 'rgba(168, 85, 247, 0.25)',
+    desc: 'Executive analytics, overall OEE targets, shift productivity summaries & plant scheduling.',
+    permissions: [
+      'Executive KPI & BI Dashboards',
+      'Production Targets & Batch Schedules',
+      'Energy Audits & Demand Curves',
+      'Cross-Plant Performance Reviews'
+    ]
+  },
+  {
+    username: 'engineer',
+    password: 'Admin@123',
+    role: 'ENGINEER',
+    label: 'Lead Engineer',
+    title: 'Process & Reliability Engineer',
+    color: '#00BCF2',
+    bgColor: 'rgba(0, 188, 242, 0.08)',
+    borderColor: 'rgba(0, 188, 242, 0.35)',
+    glowColor: 'rgba(0, 188, 242, 0.25)',
+    desc: 'High-frequency telemetry analysis, sensor calibration thresholds & predictive maintenance.',
+    permissions: [
+      'Real-time Telemetry & Anomaly Diagnostics',
+      'Sensor Calibration & Alert Thresholds',
+      'Machine Health Degradation Scoring',
+      'Preventive Maintenance Work Orders'
+    ]
+  },
+  {
+    username: 'operator',
+    password: 'Admin@123',
+    role: 'OPERATOR',
+    label: 'Floor Operator',
+    title: 'Workstation Floor Operator',
+    color: '#10B981',
+    bgColor: 'rgba(16, 185, 129, 0.08)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    glowColor: 'rgba(16, 185, 129, 0.25)',
+    desc: 'Machine workstation execution, active batch progress logging & shift incident reporting.',
+    permissions: [
+      'Active Workstation Telemetry View',
+      'Shift Batch Execution & Scrap Logging',
+      'Real-time Machine Status Verification',
+      'Maintenance Incident Flagging'
+    ]
+  }
 ];
 
-const DEFAULT_ADMIN = {
-  username: 'admin',
-  role: 'ADMIN',
-  token: 'eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbiIsImlzcyI6Imt5bmV4aXMiLCJhdWQiOlsia3luZXhpcy1hcGkiXSwicm9sZSI6IkFETUlOIiwicm9sZXMiOlsiUk9MRV9BRE1JTiJdLCJpYXQiOjE3OTMyNTEyMTMsImV4cCI6MTc5MzMzNzYxM30.mjbKMdA5BBBpJ90v2CGj2AkcQwEaG6p8aqVv18fkDrcETeMhvuSC9NB2ej4ddfUO'
+const isTokenValid = (token) => {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  try {
+    const payload = JSON.parse(atob(parts[1]));
+    if (payload.exp && payload.exp * 1000 < Date.now() + 30000) {
+      return false; // Expired
+    }
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 const getInitialUser = () => {
   try {
     const savedUserStr = localStorage.getItem('kynexis_user');
     const savedToken = localStorage.getItem('kynexis_token');
-    const isGenuineJwt = savedToken && savedToken.startsWith('ey') && savedToken.split('.').length === 3;
-    if (savedUserStr && isGenuineJwt) {
+    if (savedUserStr && isTokenValid(savedToken)) {
       return JSON.parse(savedUserStr);
     }
-  } catch {}
-  return DEFAULT_ADMIN;
+  } catch { }
+  return null;
 };
 
 export function AuthProvider({ children }) {
@@ -35,29 +111,21 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Rehydrate genuine session in background without blocking initial UI
-    async function initSession() {
+    // Check if stored token is still valid on startup
+    const savedUserStr = localStorage.getItem('kynexis_user');
+    const savedToken = localStorage.getItem('kynexis_token');
+    if (savedUserStr && isTokenValid(savedToken)) {
       try {
-        const savedToken = localStorage.getItem('kynexis_token');
-        const isGenuineJwt = savedToken && savedToken.startsWith('ey') && savedToken.split('.').length === 3;
-
-        if (!isGenuineJwt) {
-          const res = await authApi.login({ username: 'admin', password: 'Admin@123' });
-          const adminUser = {
-            username: res.username || 'admin',
-            role: res.role || 'ADMIN',
-            token: res.token
-          };
-          localStorage.setItem('kynexis_user', JSON.stringify(adminUser));
-          localStorage.setItem('kynexis_token', adminUser.token);
-          setUser(adminUser);
-        }
-      } catch (e) {
-        console.warn('Background session sync notice:', e);
+        setUser(JSON.parse(savedUserStr));
+      } catch {
+        setUser(null);
       }
+    } else {
+      // Clear any invalid session
+      localStorage.removeItem('kynexis_token');
+      localStorage.removeItem('kynexis_user');
+      setUser(null);
     }
-
-    initSession();
   }, []);
 
   const login = async (username, password) => {
@@ -66,7 +134,7 @@ export function AuthProvider({ children }) {
       const res = await authApi.login({ username, password });
       const userData = {
         username: res.username || username,
-        role: res.role || 'ADMIN',
+        role: (res.role || 'OPERATOR').toUpperCase(),
         token: res.token
       };
       localStorage.setItem('kynexis_token', userData.token);
@@ -91,13 +159,14 @@ export function AuthProvider({ children }) {
   const switchDemoUser = async (roleOrUsername) => {
     const found = SEED_USERS.find(
       u => u.role.toLowerCase() === roleOrUsername.toLowerCase() ||
-           u.username.toLowerCase() === roleOrUsername.toLowerCase()
+        u.username.toLowerCase() === roleOrUsername.toLowerCase()
     ) || SEED_USERS[0];
 
     try {
-      await login(found.username, found.password);
+      return await login(found.username, found.password);
     } catch (e) {
       console.warn('Switch persona error:', e);
+      throw e;
     }
   };
 
@@ -122,7 +191,8 @@ export function AuthProvider({ children }) {
         register,
         logout,
         switchDemoUser,
-        hasRole
+        hasRole,
+        seedUsers: SEED_USERS
       }}
     >
       {children}

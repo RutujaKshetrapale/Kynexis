@@ -31,3 +31,6 @@ Thumbs.db
 
 # Dev PID file
 .kynexis-dev.pid
+
+# Scratch & temporary test scripts
+scratch/

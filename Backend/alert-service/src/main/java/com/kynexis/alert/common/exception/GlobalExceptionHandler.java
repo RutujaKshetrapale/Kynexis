@@ -89,6 +89,24 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
+    @ExceptionHandler({
+            org.springframework.security.access.AccessDeniedException.class,
+            org.springframework.security.authorization.AuthorizationDeniedException.class
+    })
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(
+            Exception ex, HttpServletRequest request) {
+        log.warn("Access denied path={}: {}", request.getRequestURI(), ex.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.FORBIDDEN.value())
+                .error(HttpStatus.FORBIDDEN.getReasonPhrase())
+                .message("Access Denied: You do not have sufficient permissions to perform this action.")
+                .path(request.getRequestURI())
+                .correlationId(getCorrelationId())
+                .build();
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(
             Exception ex, HttpServletRequest request) {

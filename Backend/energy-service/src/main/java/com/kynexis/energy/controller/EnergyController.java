@@ -36,7 +36,7 @@ public class EnergyController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ENGINEER', 'OPERATOR')")
     public ResponseEntity<EnergyDTO> create(@Valid @RequestBody EnergyRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(energyService.create(request));
     }

@@ -1,121 +1,55 @@
 /* ============================================================
-   KYNEXIS — Master Industrial Intelligence Design System
-   Pixel-Accurate Master Specification (Dark Navy/Charcoal Slate)
-   Unified Single-Sidebar, Crisp Analytics Cards, High-Precision UI
+   KYNEXIS — Microsoft Power BI Industrial Design System
+   Clean, Lightweight, High-Precision Report Canvas & Components
    ============================================================ */
 
 :root {
-  /* Master Theme Palette */
-  --background: #080B11;
-  --surface: #0E141E;
-  --surface-elevated: #131B28;
-  --surface-hover: #1A2436;
+  /* Power BI Dark Theme Color Palette */
+  --pbi-canvas: #10141E;
+  --pbi-visual-bg: #182030;
+  --pbi-visual-header: #1E273A;
+  --pbi-visual-hover: #1F2A40;
+  --pbi-border: #26334B;
+  --pbi-border-subtle: #1C273C;
+  --pbi-border-focus: #118DFF;
 
-  --text-primary: #F8FAFC;
-  --text-secondary: #94A3B8;
-  --text-muted: #64748B;
+  --pbi-blue: #118DFF;
+  --pbi-blue-hover: #0E77D9;
+  --pbi-blue-soft: rgba(17, 141, 255, 0.16);
+  --pbi-teal: #00BCF2;
+  --pbi-amber: #E66C37;
+  --pbi-gold: #F2C811;
+  --pbi-green: #107C41;
+  --pbi-emerald: #10B981;
+  --pbi-red: #D83B01;
 
-  --border: #1E293B;
-  --border-subtle: #141D2B;
-  --border-strong: #334155;
+  --pbi-text-primary: #FFFFFF;
+  --pbi-text-secondary: #94A3B8;
+  --pbi-text-muted: #64748B;
 
-  --accent: #0066FF;
-  --accent-hover: #1D78FF;
-  --accent-soft: rgba(0, 102, 255, 0.14);
-  --accent-border: rgba(0, 102, 255, 0.4);
+  --pbi-font: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Inter', Roboto, sans-serif;
+  --pbi-font-mono: 'Consolas', 'JetBrains Mono', monospace;
 
-  --success: #10B981;
-  --success-bg: rgba(16, 185, 129, 0.12);
-  --success-border: rgba(16, 185, 129, 0.35);
-
-  --warning: #F59E0B;
-  --warning-bg: rgba(245, 158, 11, 0.12);
-  --warning-border: rgba(245, 158, 11, 0.35);
-
-  --danger: #EF4444;
-  --danger-bg: rgba(239, 68, 68, 0.12);
-  --danger-border: rgba(239, 68, 68, 0.35);
-
-  --info: #38BDF8;
-  --info-bg: rgba(56, 189, 248, 0.12);
-  --info-border: rgba(56, 189, 248, 0.35);
-
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-full: 9999px;
-
-  /* Aliases for backwards compatibility */
-  --bg-workspace: var(--background);
-  --bg-canvas: #06090E;
-  --bg-surface: var(--surface);
-  --bg-surface-elevated: var(--surface-elevated);
-  --bg-surface-subtle: #101723;
-  --bg-surface-hover: var(--surface-hover);
-
-  --border-light: var(--border);
-  --border-medium: #222F44;
-
-  --navy-darkest: #05070B;
-  --navy-primary: #0A0F17;
-  --navy-surface: #0E141E;
-  --navy-border: var(--border);
-  --navy-muted: var(--text-muted);
-  --navy-text: var(--text-primary);
-
-  --status-healthy: var(--success);
-  --status-healthy-bg: var(--success-bg);
-  --status-healthy-border: var(--success-border);
-  --status-healthy-text: #10B981;
-
-  --status-warning: var(--warning);
-  --status-warning-bg: var(--warning-bg);
-  --status-warning-border: var(--warning-border);
-  --status-warning-text: #F59E0B;
-
-  --status-critical: var(--danger);
-  --status-critical-bg: var(--danger-bg);
-  --status-critical-border: var(--danger-border);
-  --status-critical-text: #EF4444;
-
-  --status-inactive: #64748B;
-  --status-inactive-bg: rgba(100, 116, 139, 0.12);
-  --status-inactive-border: rgba(100, 116, 139, 0.35);
-  --status-inactive-text: #94A3B8;
-
-  --accent-lime: var(--success);
-  --accent-teal: #38BDF8;
-  --accent-blue: var(--accent);
-
-  --sidebar-width: 220px;
-  --header-height: 64px;
-
-  --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.6);
-  --shadow-dropdown: 0 14px 36px rgba(0, 0, 0, 0.85);
-
-  --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
-
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.22s ease;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
 }
 
 /* Base Reset */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
 }
 
-html, body {
+html,
+body {
   height: 100%;
-  background-color: var(--background);
-  color: var(--text-primary);
-  font-family: var(--font-body);
+  background-color: var(--pbi-canvas);
+  color: var(--pbi-text-primary);
+  font-family: var(--pbi-font);
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -124,1364 +58,1109 @@ html, body {
 
 /* Scrollbars */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
-}
-::-webkit-scrollbar-track {
-  background: var(--background);
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  width: 6px;
+  height: 6px;
 }
 
-/* Monospace numerals */
-.mono, .tabular-num, [data-tabular] {
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
+::-webkit-scrollbar-track {
+  background: #0E131E;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #26334B;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3B4D6E;
+}
+
+/* Keyframes */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin-animation {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.3);
+    opacity: 0.6;
+  }
 }
 
 /* ============================================================
-   Application Shell Layout
+   Power BI Report Canvas & Shell Layout
    ============================================================ */
-.app-container {
+.pbi-report-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
-  background-color: var(--background);
-  width: 100%;
-  overflow-x: hidden;
-}
-
-/* Unified Left Sidebar */
-.kynexis-sidebar {
-  width: var(--sidebar-width);
-  height: 100vh;
-  position: fixed;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background-color: #0A0F17;
-  border-right: 1px solid var(--border-subtle);
-  display: flex;
-  flex-direction: column;
-  z-index: 100;
-  padding: 16px 12px;
-  transition: width var(--transition-normal);
-}
-
-.kynexis-sidebar.collapsed {
-  width: 68px;
-  padding: 16px 8px;
-}
-
-/* Sidebar Brand Header */
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 4px 8px 18px 8px;
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: 14px;
-  cursor: pointer;
-}
-
-.sidebar-logo-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #0066FF 0%, #0044BB 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background-color: var(--pbi-canvas);
+  font-family: var(--pbi-font);
   color: #FFFFFF;
-  flex-shrink: 0;
-  box-shadow: 0 0 12px rgba(0, 102, 255, 0.4);
 }
 
-.sidebar-brand-name {
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: #FFFFFF;
-  line-height: 1;
-}
-
-/* Navigation Menu */
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.pbi-canvas-main {
   flex: 1;
-  overflow-y: auto;
-}
-
-.sidebar-nav-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 9px 12px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  text-align: left;
-  transition: all var(--transition-fast);
-  width: 100%;
-}
-
-.sidebar-nav-btn:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sidebar-nav-btn.active {
-  background: #0066FF;
-  color: #FFFFFF;
-  font-weight: 600;
-  box-shadow: 0 2px 10px rgba(0, 102, 255, 0.4);
-}
-
-.sidebar-nav-btn.active svg {
-  color: #FFFFFF;
-}
-
-/* User Footer Row in Sidebar */
-.sidebar-user-footer {
-  margin-top: auto;
-  padding: 10px 8px 4px 8px;
-  border-top: 1px solid var(--border-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: background var(--transition-fast);
-}
-
-.sidebar-user-footer:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sidebar-user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  overflow: hidden;
-}
-
-.sidebar-user-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: #1A2436;
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.sidebar-user-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-primary);
-  line-height: 1.2;
-}
-
-.sidebar-user-role {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-/* Main Content Wrapper */
-.main-content {
-  flex: 1;
-  margin-left: var(--sidebar-width);
   min-width: 0;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
-  background-color: var(--background);
-  transition: margin-left var(--transition-normal);
+  padding: 16px 20px 24px 20px;
+  overflow-y: auto;
 }
 
-.main-content.sidebar-collapsed {
-  margin-left: 68px;
-}
-
-/* Page Container */
-.page-container {
-  flex: 1;
-  padding: 20px 28px 40px;
-  max-width: 1720px;
-  width: 100%;
-  margin: 0 auto;
-}
-
-/* ============================================================
-   Top Header (Matches Reference Header)
-   ============================================================ */
-.kynexis-header {
-  height: var(--header-height);
+/* Power BI Service Action Ribbon / Header */
+.pbi-ribbon {
+  height: 48px;
+  background: #141B29;
+  border-bottom: 1px solid var(--pbi-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 28px;
-  background: var(--background);
-  border-bottom: 1px solid var(--border-subtle);
-  position: sticky;
-  top: 0;
-  z-index: 90;
+  padding: 0 18px;
+  z-index: 95;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.header-title-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.header-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #FFFFFF;
-  letter-spacing: -0.01em;
-  margin: 0;
-}
-
-.header-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin: 0;
-}
-
-.header-actions {
+.pbi-ribbon-left {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* Header Plant Selector Pill */
-.header-plant-selector {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 6px 12px;
-  font-size: 12px;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.header-plant-selector:hover {
-  border-color: var(--border-strong);
-}
-
-/* Online Status Badge Pill */
-.header-status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  color: #10B981;
-  border-radius: var(--radius-full);
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.header-status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #10B981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.8);
-}
-
-/* Date / Time Display */
-.header-datetime {
-  font-size: 12px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-}
-
-/* Icon Buttons */
-.header-icon-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-sm);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  position: relative;
-  transition: all var(--transition-fast);
-}
-
-.header-icon-btn:hover {
-  color: var(--text-primary);
-  border-color: var(--border-strong);
-}
-
-.header-notification-dot {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--danger);
-  box-shadow: 0 0 6px var(--danger);
-}
-
-.header-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: #1A2436;
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-/* ============================================================
-   Standard Card & Container System
-   ============================================================ */
-.kyn-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 16px 18px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  flex-direction: column;
-  transition: border-color var(--transition-fast);
-}
-
-.kyn-card:hover {
-  border-color: rgba(0, 102, 255, 0.35);
-}
-
-.kyn-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.kyn-card-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #FFFFFF;
-  margin: 0;
+.pbi-logo-badge {
   display: flex;
   align-items: center;
   gap: 8px;
+  padding-right: 14px;
+  border-right: 1px solid var(--pbi-border);
 }
 
-.kyn-card-subtitle {
-  font-size: 11px;
-  color: var(--text-muted);
+.pbi-logo-icon {
+  width: 22px;
+  height: 22px;
+  background: var(--pbi-gold);
+  border-radius: 4px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 3px 2px;
+  gap: 1.5px;
+  box-shadow: 0 1px 4px rgba(242, 200, 17, 0.4);
 }
 
-/* ============================================================
-   Dashboard Layout Grid (Master Specification)
-   ============================================================ */
-/* Top KPI Row: 4 equal cards */
-.dashboard-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 16px;
+.pbi-logo-bar {
+  background: #10141E;
+  border-radius: 1px;
 }
 
-.kpi-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
+.pbi-report-info {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 96px;
-  cursor: pointer;
-  transition: border-color var(--transition-fast);
+  gap: 1px;
 }
 
-.kpi-card:hover {
-  border-color: rgba(0, 102, 255, 0.4);
-}
-
-.kpi-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.kpi-label {
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.kpi-val {
-  font-size: 24px;
+.pbi-report-title {
+  font-size: 13.5px;
   font-weight: 700;
   color: #FFFFFF;
-  font-family: var(--font-mono);
-  margin: 4px 0 2px 0;
-  line-height: 1.1;
+  line-height: 1.2;
 }
 
-.kpi-sub {
-  font-size: 11px;
-  font-weight: 600;
+.pbi-report-breadcrumb {
+  font-size: 10.5px;
+  color: var(--pbi-text-secondary);
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.kpi-sub.up {
-  color: var(--success);
+.pbi-ribbon-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.kpi-sub.down {
-  color: var(--danger);
+.pbi-ribbon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: #E2E8F0;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
 }
 
-.kpi-sub.neutral {
-  color: var(--text-muted);
+.pbi-ribbon-btn:hover {
+  background: #1F2A40;
+  border-color: var(--pbi-border);
+  color: #FFFFFF;
 }
 
-/* Middle Analytics Row: 3 cards (Wide Line Chart, Activity Bars, Health Heatmap) */
-.dashboard-middle-grid {
-  display: grid;
-  grid-template-columns: 1.45fr 1fr 0.95fr;
-  gap: 16px;
-  margin-bottom: 16px;
+.pbi-ribbon-btn.active {
+  background: var(--pbi-blue-soft);
+  border-color: var(--pbi-blue);
+  color: var(--pbi-blue);
 }
 
-/* Lower Analytics Row: 3 cards (Production Summary, Telemetry 7D Bars, Recent Alerts) */
-.dashboard-bottom-grid {
-  display: grid;
-  grid-template-columns: 0.9fr 1.45fr 1fr;
-  gap: 16px;
+.pbi-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--pbi-text-secondary);
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--pbi-border-subtle);
 }
 
 /* ============================================================
-   Tables & Data Grid
+   Power BI Top Chiclet Slicers Bar
    ============================================================ */
-.table-container {
-  background: var(--surface);
-  border: 1px solid var(--border);
+.pbi-slicers-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: #151C2C;
+  border: 1px solid var(--pbi-border);
   border-radius: var(--radius-md);
-  overflow: hidden;
-  width: 100%;
-  overflow-x: auto;
-}
-
-.kyn-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-  text-align: left;
-}
-
-.kyn-table thead {
-  background: var(--surface-elevated);
-  border-bottom: 1px solid var(--border);
-}
-
-.kyn-table th {
   padding: 10px 14px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.pbi-slicer-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pbi-slicer-label {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-weight: 700;
+  color: var(--pbi-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   white-space: nowrap;
 }
 
-.kyn-table td {
-  padding: 12px 14px;
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border-subtle);
-  vertical-align: middle;
-}
-
-.kyn-table tbody tr {
-  transition: background var(--transition-fast);
-}
-
-.kyn-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.025);
-}
-
-.kyn-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-/* ============================================================
-   Status Badges (Exact Master Match)
-   ============================================================ */
-.badge {
+.pbi-chiclet-container {
   display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: var(--radius-full);
-  font-size: 10.5px;
-  font-weight: 600;
-  font-family: var(--font-mono);
-  white-space: nowrap;
-}
-
-.badge-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* Running / Online / Normal / Completed / Resolved */
-.badge-running, .badge-online, .badge-normal, .badge-completed, .badge-resolved, .badge-healthy, .badge-active {
-  background: var(--success-bg);
-  color: #10B981;
-  border: 1px solid var(--success-border);
-}
-.badge-running .badge-dot, .badge-online .badge-dot, .badge-normal .badge-dot, .badge-completed .badge-dot {
-  background: #10B981;
-  box-shadow: 0 0 6px #10B981;
-}
-
-/* Warning / Maintenance / In Progress / Medium / High */
-.badge-warning, .badge-maintenance, .badge-in-progress, .badge-medium, .badge-high {
-  background: var(--warning-bg);
-  color: #F59E0B;
-  border: 1px solid var(--warning-border);
-}
-.badge-warning .badge-dot, .badge-maintenance .badge-dot {
-  background: #F59E0B;
-  box-shadow: 0 0 6px #F59E0B;
-}
-
-/* Critical / Offline / Open / Danger */
-.badge-critical, .badge-offline, .badge-open, .badge-danger {
-  background: var(--danger-bg);
-  color: #EF4444;
-  border: 1px solid var(--danger-border);
-}
-.badge-critical .badge-dot, .badge-offline .badge-dot, .badge-open .badge-dot {
-  background: #EF4444;
-  box-shadow: 0 0 6px #EF4444;
-}
-
-/* Idle / Low / Standby / Scheduled */
-.badge-idle, .badge-low, .badge-standby, .badge-scheduled {
-  background: var(--info-bg);
-  color: #38BDF8;
-  border: 1px solid var(--info-border);
-}
-.badge-idle .badge-dot, .badge-low .badge-dot {
-  background: #38BDF8;
-}
-
-/* ============================================================
-   Buttons & Interactive Elements
-   ============================================================ */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 7px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  cursor: pointer;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: all var(--transition-fast);
-}
-
-.btn-primary {
-  background: #0066FF;
-  color: #FFFFFF;
-  border-color: #0066FF;
-  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
-}
-
-.btn-primary:hover {
-  background: #1D78FF;
-  border-color: #1D78FF;
-  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.6);
-}
-
-.btn-secondary, .btn-outline {
-  background: var(--surface);
-  color: var(--text-primary);
-  border-color: var(--border);
-}
-
-.btn-secondary:hover, .btn-outline:hover {
-  background: var(--surface-elevated);
-  border-color: var(--border-strong);
-}
-
-.btn-sm {
-  padding: 4px 10px;
-  font-size: 11px;
-}
-
-/* Search input */
-.search-box {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.search-box input {
-  padding: 7px 14px 7px 38px !important;
-  font-size: 12px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  outline: none;
-  width: 240px;
-  transition: border-color var(--transition-fast);
-}
-
-.search-box input:focus {
-  border-color: var(--accent);
-}
-
-.search-box svg {
-  position: absolute;
-  left: 12px;
-  color: var(--text-muted);
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* Dropdown filter button */
-.filter-dropdown-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 6px 10px;
-  font-size: 12px;
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-/* Pill Time Segment Controls (e.g. 7D 1M 3M 1Y) */
-.time-segment-control {
-  display: inline-flex;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
+  background: #0E1422;
+  border: 1px solid var(--pbi-border);
   border-radius: var(--radius-sm);
   padding: 2px;
   gap: 2px;
 }
 
-.time-segment-btn {
-  padding: 2px 8px;
+.pbi-chiclet-btn {
+  padding: 4px 10px;
   font-size: 11px;
   font-weight: 600;
-  border-radius: 4px;
+  border-radius: 3px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--pbi-text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
-.time-segment-btn.active {
-  background: #0066FF;
+.pbi-chiclet-btn:hover {
   color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.06);
 }
 
-/* Plant Card Showcase Grid */
-.plants-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+.pbi-chiclet-btn.active {
+  background: var(--pbi-blue);
+  color: #FFFFFF;
+  box-shadow: 0 1px 4px rgba(17, 141, 255, 0.4);
 }
 
-.plant-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
+/* ============================================================
+   Power BI Visual Container Cards
+   ============================================================ */
+.pbi-visual-card {
+  background: var(--pbi-visual-bg);
+  border: 1px solid var(--pbi-border);
   border-radius: var(--radius-md);
   overflow: hidden;
-  cursor: pointer;
-  transition: transform var(--transition-fast), border-color var(--transition-fast);
-}
-
-.plant-card:hover {
-  border-color: rgba(0, 102, 255, 0.4);
-  transform: translateY(-2px);
-}
-
-.plant-card-img-wrap {
-  width: 100%;
-  height: 140px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   position: relative;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pbi-visual-card:hover {
+  border-color: #384A6A;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+
+.pbi-visual-header {
+  height: 36px;
+  background: var(--pbi-visual-header);
+  border-bottom: 1px solid var(--pbi-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+}
+
+.pbi-visual-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
-  background: #05070B;
 }
 
-.plant-card-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-
-.plant-card:hover .plant-card-img {
-  transform: scale(1.05);
-}
-
-.plant-card-body {
-  padding: 14px 16px;
-}
-
-.plant-card-title {
-  font-size: 14px;
+.pbi-visual-title {
+  font-size: 12.5px;
   font-weight: 700;
   color: #FFFFFF;
-  margin-bottom: 8px;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
-.plant-card-metrics {
+.pbi-visual-subtitle {
+  font-size: 10.5px;
+  color: var(--pbi-text-secondary);
+  white-space: nowrap;
+}
+
+.pbi-visual-tools {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  margin-bottom: 12px;
+  gap: 2px;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
 }
 
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(5, 7, 11, 0.75);
-  backdrop-filter: blur(4px);
+.pbi-visual-card:hover .pbi-visual-tools {
+  opacity: 1;
+}
+
+.pbi-tool-btn {
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--pbi-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.modal-content {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-dropdown);
-  width: 100%;
-  max-width: 540px;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modal-title {
-  font-size: 15px;
-  font-weight: 700;
+.pbi-tool-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: #FFFFFF;
 }
 
-.modal-body {
-  padding: 18px;
-  overflow-y: auto;
-}
-
-.modal-footer {
+.pbi-visual-body {
+  padding: 14px 16px;
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 18px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-elevated);
+  flex-direction: column;
 }
 
-/* Forms */
-.form-group {
-  margin-bottom: 14px;
+/* ============================================================
+   Power BI KPI Callout Cards (Multi-Row Visuals)
+   ============================================================ */
+.pbi-kpi-callout {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
 }
 
-.form-label {
-  display: block;
+.pbi-callout-val {
+  font-size: 28px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.pbi-callout-label {
   font-size: 11.5px;
   font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
+  color: var(--pbi-text-secondary);
+  margin-top: 3px;
+}
+
+.pbi-reference-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 3px;
+  margin-top: 8px;
+  width: fit-content;
+}
+
+.pbi-reference-up {
+  background: rgba(16, 185, 129, 0.14);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.pbi-reference-down {
+  background: rgba(216, 59, 1, 0.14);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+/* ============================================================
+   Power BI Radial Semicircular Gauge Visual
+   ============================================================ */
+.pbi-gauge-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  padding-top: 6px;
+}
+
+.pbi-gauge-svg {
+  width: 100%;
+  max-width: 220px;
+  overflow: visible;
+}
+
+.pbi-gauge-callout {
+  position: absolute;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pbi-gauge-number {
+  font-size: 24px;
+  font-weight: 800;
+  color: #FFFFFF;
+  line-height: 1;
+}
+
+.pbi-gauge-target {
+  font-size: 10px;
+  color: var(--pbi-text-secondary);
+  margin-top: 2px;
+}
+
+.pbi-gauge-footer {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--pbi-text-muted);
+  font-family: var(--pbi-font-mono);
+  padding: 0 10px;
+}
+
+/* ============================================================
+   Power BI Matrix Table Visual & In-Cell Bars
+   ============================================================ */
+.pbi-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pbi-matrix-table thead th {
+  background: #141B29;
+  border-bottom: 2px solid var(--pbi-border);
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--pbi-text-secondary);
+  text-align: left;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
-.form-input, .form-select, input[type="text"], input[type="password"], input[type="email"], select, textarea {
-  width: 100%;
+.pbi-matrix-table tbody td {
   padding: 8px 12px;
-  font-size: 12.5px;
-  font-family: inherit;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--pbi-border-subtle);
+  color: #E2E8F0;
+  vertical-align: middle;
+}
+
+.pbi-matrix-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.pbi-matrix-table tfoot td {
+  background: #141B29;
+  border-top: 2px solid var(--pbi-border);
+  padding: 9px 12px;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.pbi-cell-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pbi-cell-bar-track {
+  flex: 1;
+  height: 8px;
+  background: #0E1422;
+  border-radius: 2px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.pbi-cell-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ============================================================
+   Power BI Smart Narrative (AI Executive Insights)
+   ============================================================ */
+.pbi-smart-narrative-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pbi-gold);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--pbi-border);
+}
+
+.pbi-narrative-bullet {
+  position: relative;
+  padding-left: 14px;
+}
+
+.pbi-narrative-bullet::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--pbi-blue);
+  font-weight: 800;
+}
+
+.pbi-narrative-bullet strong {
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+/* ============================================================
+   Power BI Right Filters Pane & Bottom Tabs
+   ============================================================ */
+.pbi-filters-pane {
+  width: 290px;
+  background: #141A28;
+  border-left: 1px solid var(--pbi-border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  z-index: 80;
+  flex-shrink: 0;
+}
+
+.pbi-filters-header {
+  height: 42px;
+  padding: 0 14px;
+  background: #182030;
+  border-bottom: 1px solid var(--pbi-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pbi-filters-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pbi-filter-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--pbi-border-subtle);
+}
+
+.pbi-filter-section-title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--pbi-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.pbi-filter-card {
+  background: #1A2234;
+  border: 1px solid var(--pbi-border);
   border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color var(--transition-fast);
+  padding: 8px 10px;
+  margin-bottom: 6px;
 }
 
-.form-input:focus, select:focus, textarea:focus {
-  border-color: var(--accent);
+.pbi-filter-card-field {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 2px;
 }
 
-/* Loading spinner */
-.spinner {
-  width: 24px;
-  height: 24px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+.pbi-filter-card-summary {
+  font-size: 11px;
+  color: var(--pbi-blue);
 }
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
+.pbi-page-tabs-bar {
+  height: 38px;
+  background: #141B29;
+  border-top: 1px solid var(--pbi-border);
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 2px;
+  overflow-x: auto;
+  z-index: 90;
 }
 
-/* Responsive Rules */
-@media (max-width: 1380px) {
-  .dashboard-middle-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .dashboard-middle-grid > div:last-child {
-    grid-column: span 2;
-  }
-  .dashboard-bottom-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .dashboard-bottom-grid > div:last-child {
-    grid-column: span 2;
-  }
-  .plants-grid {
+.pbi-page-tab {
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  background: #1B2234;
+  border: 1px solid var(--pbi-border-subtle);
+  border-bottom: none;
+  border-radius: 4px 4px 0 0;
+  color: var(--pbi-text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.pbi-page-tab:hover {
+  background: #232C42;
+  color: #FFFFFF;
+}
+
+.pbi-page-tab.active {
+  background: #25314C;
+  color: #FFFFFF;
+  border-top: 2px solid var(--pbi-gold);
+  border-color: #384A6E;
+  box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.2);
+}
+
+
+/* ============================================================
+   Power BI Enterprise Sign-In & Role Access System
+   ============================================================ */
+.pbi-login-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: #0B0E17;
+  background-image: 
+    radial-gradient(circle at 15% 20%, rgba(242, 200, 17, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(17, 141, 255, 0.06) 0%, transparent 45%),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 32px 32px, 32px 32px;
+  position: relative;
+  overflow-x: hidden;
+}
+
+.pbi-login-topbar {
+  height: 52px;
+  border-bottom: 1px solid var(--pbi-border);
+  background: rgba(16, 20, 30, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  z-index: 50;
+}
+
+.pbi-login-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  z-index: 10;
+}
+
+.pbi-login-hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.pbi-login-hero-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.pbi-login-hero-subtitle {
+  font-size: 13.5px;
+  color: var(--pbi-text-secondary);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.pbi-role-deck-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--pbi-gold);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pbi-role-deck {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+  margin-bottom: 28px;
+}
+
+@media (max-width: 1024px) {
+  .pbi-role-deck {
     grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 980px) {
-  .kynexis-sidebar {
-    width: 68px;
-    padding: 14px 6px;
-  }
-  .sidebar-brand-name, .sidebar-nav-btn span, .sidebar-user-name, .sidebar-user-role, .sidebar-user-footer svg {
-    display: none;
-  }
-  .sidebar-nav-btn {
-    justify-content: center;
-    padding: 10px;
-  }
-  .main-content {
-    margin-left: 68px;
-  }
-  .dashboard-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .dashboard-middle-grid, .dashboard-bottom-grid {
-    grid-template-columns: 1fr;
-  }
-  .dashboard-middle-grid > div:last-child,
-  .dashboard-bottom-grid > div:last-child {
-    grid-column: span 1;
-  }
-  .plants-grid {
-    grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 640px) {
-  .dashboard-kpi-grid {
+  .pbi-role-deck {
     grid-template-columns: 1fr;
   }
-  .page-container {
-    padding: 14px;
-  }
-  .header-datetime {
-    display: none;
-  }
 }
 
-/* ============================================================
-   KYNEXIS — AI Digital Twin Styling & 3D HUD Specifications
-   ============================================================ */
-
-.spin-animation {
-  animation: dt-spin 1s linear infinite;
-}
-
-@keyframes dt-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.pulse-radar {
-  animation: dt-pulse 1.8s ease-in-out infinite;
-}
-
-@keyframes dt-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.45; transform: scale(0.9); }
-}
-
-.badge-unknown {
-  background: rgba(100, 116, 139, 0.12);
-  border: 1px solid rgba(100, 116, 139, 0.3);
-  color: #94A3B8;
-}
-
-.factory-scene-viewport:focus {
-  outline: 1.5px solid var(--accent, #0066FF);
-}
-
-.machine-detail-panel::-webkit-scrollbar {
-  width: 5px;
-}
-
-.machine-detail-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.machine-detail-panel::-webkit-scrollbar-thumb {
-  background: var(--border-strong, #334155);
-  border-radius: 4px;
-}
-
-@media (max-width: 1100px) {
-  .digital-twin-page > div[style*="gridTemplateColumns"] {
-    grid-template-columns: 1fr !important;
-  }
-  .machine-detail-panel {
-    max-width: 100% !important;
-  }
-}
-
-.scenario-interactive-card {
-  transition: all 0.2s ease;
-}
-
-.scenario-interactive-card:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent, #0066FF) !important;
-  box-shadow: 0 6px 16px rgba(0, 102, 255, 0.18);
-}
-
-.scenario-interactive-card:hover svg[class*="lucide-arrow-right"] {
-  color: var(--accent, #0066FF) !important;
-  transform: translateX(3px);
-}
-
-.machine-row-hover:hover {
-  background: rgba(255, 255, 255, 0.04);
-}
-
-@keyframes pulseRing {
-  0% {
-    transform: scale(0.65);
-    opacity: 0.95;
-  }
-  50% {
-    opacity: 0.6;
-  }
-  100% {
-    transform: scale(1.6);
-    opacity: 0;
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ============================================================
-   Record Batch Primary Action Button (Redesigned)
-   ============================================================ */
-.btn-record-batch {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #0066FF 0%, #0047BA 100%);
-  color: #FFFFFF;
-  border: 1px solid rgba(56, 189, 248, 0.45);
-  border-radius: var(--radius-sm);
-  padding: 8px 16px;
-  font-size: 12.5px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+.pbi-role-card {
+  background: var(--pbi-visual-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 102, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
+  user-select: none;
 }
 
-.btn-record-batch::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 60%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.22), transparent);
-  transform: skewX(-20deg);
-  transition: left 0.6s ease;
-}
-
-.btn-record-batch:hover {
-  background: linear-gradient(135deg, #1D78FF 0%, #005ce6 100%);
-  border-color: rgba(56, 189, 248, 0.8);
-  box-shadow: 0 6px 20px rgba(0, 102, 255, 0.55), 0 0 12px rgba(56, 189, 248, 0.35);
-  transform: translateY(-1px);
-}
-
-.btn-record-batch:hover::after {
-  left: 140%;
-}
-
-.btn-record-batch:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.4);
-}
-
-.btn-record-batch .btn-record-batch-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-/* ============================================================
-   Action Buttons for Edit & Delete (Redesigned)
-   ============================================================ */
-.action-btn-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 5px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid transparent;
-  outline: none;
-  line-height: 1;
-}
-
-/* Edit Action Button */
-.action-btn-edit {
-  background: rgba(0, 102, 255, 0.12);
-  color: #38BDF8;
-  border-color: rgba(56, 189, 248, 0.3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.action-btn-edit:hover {
-  background: rgba(0, 102, 255, 0.25);
-  color: #FFFFFF;
-  border-color: rgba(56, 189, 248, 0.7);
-  box-shadow: 0 2px 10px rgba(0, 102, 255, 0.4), 0 0 8px rgba(56, 189, 248, 0.25);
-  transform: translateY(-1px);
-}
-
-.action-btn-edit:active {
-  transform: translateY(0);
-}
-
-/* Delete Action Button */
-.action-btn-delete {
-  background: rgba(239, 68, 68, 0.12);
-  color: #EF4444;
-  border-color: rgba(239, 68, 68, 0.3);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
-}
-
-.action-btn-delete:hover {
-  background: rgba(239, 68, 68, 0.25);
-  color: #FFFFFF;
-  border-color: rgba(239, 68, 68, 0.7);
-  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4), 0 0 8px rgba(239, 68, 68, 0.25);
-  transform: translateY(-1px);
-}
-
-.action-btn-delete:active {
-  transform: translateY(0);
-}
-
-/* ============================================================
-   Redesigned Manufactured Volume by Asset Component
-   ============================================================ */
-.asset-volume-container {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
-  position: relative;
-  overflow: hidden;
-}
-
-.asset-volume-container::before {
+.pbi-role-card::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #0066FF 0%, #00D2FF 50%, transparent 100%);
+  height: 3px;
+  background: var(--role-accent, #3B82F6);
+  opacity: 0.4;
+  transition: opacity 0.2s ease;
 }
 
-.asset-volume-header {
+.pbi-role-card:hover {
+  border-color: var(--role-accent, #3B82F6);
+  background: #1C263B;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.pbi-role-card:hover::before {
+  opacity: 1;
+}
+
+.pbi-role-card.selected {
+  border-color: var(--role-accent, #3B82F6);
+  background: #1D283E;
+  box-shadow: 0 0 0 1px var(--role-accent, #3B82F6), 0 8px 28px var(--role-glow, rgba(0, 0, 0, 0.4));
+}
+
+.pbi-role-card.selected::before {
+  opacity: 1;
+  height: 4px;
+}
+
+.pbi-role-card-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 12px;
 }
 
-.asset-volume-title-group {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.asset-volume-icon-badge {
+.pbi-role-icon-box {
   width: 36px;
   height: 36px;
   border-radius: 8px;
-  background: rgba(0, 102, 255, 0.12);
-  border: 1px solid rgba(0, 102, 255, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #0066FF;
-  box-shadow: 0 0 12px rgba(0, 102, 255, 0.2);
+  font-size: 18px;
 }
 
-.asset-volume-title {
-  font-size: 15px;
+.pbi-role-badge {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  padding: 3px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.pbi-role-title {
+  font-size: 14px;
   font-weight: 700;
   color: #FFFFFF;
-  margin: 0;
-  letter-spacing: -0.01em;
+  margin-bottom: 2px;
 }
 
-.asset-volume-subtitle {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.asset-volume-summary-pills {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.asset-summary-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 5px 11px;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border);
-  border-radius: 20px;
+.pbi-role-subtext {
   font-size: 11px;
-  color: var(--text-secondary);
-}
-
-.asset-summary-pill strong {
-  color: #FFFFFF;
-  font-family: var(--font-mono);
-  font-weight: 700;
-}
-
-.asset-volume-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-}
-
-@media (max-width: 900px) {
-  .asset-volume-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.asset-volume-card {
-  background: var(--surface-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 14px 16px;
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.asset-volume-card:hover {
-  border-color: rgba(0, 102, 255, 0.4);
-  background: rgba(22, 31, 46, 0.85);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  transform: translateY(-1px);
-}
-
-.asset-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  color: var(--pbi-text-secondary);
+  font-family: var(--pbi-font-mono);
   margin-bottom: 10px;
 }
 
-.asset-tag {
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  color: #38BDF8;
-  background: rgba(56, 189, 248, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid rgba(56, 189, 248, 0.25);
-  margin-right: 6px;
+.pbi-role-desc {
+  font-size: 11.5px;
+  color: #94A3B8;
+  line-height: 1.45;
+  margin-bottom: 14px;
+  flex: 1;
 }
 
-.asset-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #FFFFFF;
+.pbi-role-perms-list {
+  list-style: none;
+  margin-bottom: 16px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
-.asset-type-badge {
+.pbi-role-perm-item {
   font-size: 10.5px;
-  color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.asset-volume-value {
-  font-size: 16px;
-  font-weight: 700;
-  color: #FFFFFF;
-  font-family: var(--font-mono);
-  text-align: right;
-}
-
-.asset-volume-track {
-  height: 10px;
-  border-radius: 5px;
-  background: #0B0F17;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  overflow: hidden;
+  color: #CBD5E1;
   display: flex;
-  margin: 10px 0 12px 0;
-  position: relative;
-}
-
-.asset-bar-good {
-  height: 100%;
-  background: linear-gradient(90deg, #0066FF 0%, #00D2FF 100%);
-  border-radius: 4px 0 0 4px;
-  box-shadow: 0 0 8px rgba(0, 102, 255, 0.4);
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.asset-bar-scrap {
-  height: 100%;
-  background: #EF4444;
-  border-radius: 0 4px 4px 0;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.5);
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.asset-card-footer {
-  display: flex;
-  justify-content: space-between;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 11px;
+  gap: 6px;
 }
 
-.asset-metric-chip {
+.pbi-role-perm-bullet {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--role-accent, #3B82F6);
+  flex-shrink: 0;
+}
+
+.pbi-role-action-btn {
+  height: 32px;
+  width: 100%;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border: 1px solid var(--role-accent, #3B82F6);
+  background: transparent;
+  color: var(--role-accent, #3B82F6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.pbi-role-action-btn:hover {
+  background: var(--role-accent, #3B82F6);
+  color: #0E131E;
+}
+
+.pbi-login-form-box {
+  width: 100%;
+  max-width: 520px;
+  background: var(--pbi-visual-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  padding: 26px 28px;
+  margin-bottom: 24px;
+}
+
+.pbi-form-active-role-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid var(--pbi-border-subtle);
+  background: #131A28;
+}
+
+.pbi-form-group {
+  margin-bottom: 16px;
+}
+
+.pbi-form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #CBD5E1;
+  margin-bottom: 6px;
+}
+
+.pbi-form-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pbi-form-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--pbi-text-muted);
+  pointer-events: none;
+}
+
+.pbi-form-input {
+  width: 100%;
+  height: 40px;
+  background: #111724;
+  border: 1px solid var(--pbi-border);
+  border-radius: var(--radius-md);
+  color: #FFFFFF;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 0 40px 0 38px;
+  transition: all 0.15s ease;
+}
+
+.pbi-form-input:focus {
+  outline: none;
+  border-color: var(--pbi-gold);
+  background: #151D2D;
+  box-shadow: 0 0 0 2px rgba(242, 200, 17, 0.2);
+}
+
+.pbi-form-input-action {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--pbi-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+}
+
+.pbi-form-input-action:hover {
+  color: #FFFFFF;
+}
+
+.pbi-submit-btn {
+  width: 100%;
+  height: 42px;
+  background: linear-gradient(135deg, #F2C811 0%, #D4A700 100%);
+  color: #0F131E;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  margin-top: 8px;
+}
+
+.pbi-submit-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFD41D 0%, #E5B500 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(242, 200, 17, 0.35);
+}
+
+.pbi-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.pbi-login-error {
+  background: rgba(216, 59, 1, 0.15);
+  border: 1px solid rgba(216, 59, 1, 0.4);
+  color: #FFB3A1;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pbi-rbac-matrix-box {
+  width: 100%;
+  max-width: 960px;
+  background: var(--pbi-visual-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.pbi-rbac-matrix-header {
+  padding: 12px 18px;
+  background: var(--pbi-visual-header);
+  border-bottom: 1px solid var(--pbi-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+}
+
+.pbi-rbac-matrix-header:hover {
+  background: #232D42;
+}
+
+.pbi-rbac-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.pbi-rbac-table th {
+  background: #141B29;
+  color: var(--pbi-text-secondary);
+  font-weight: 700;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--pbi-border);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pbi-rbac-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--pbi-border-subtle);
+  color: #CBD5E1;
+}
+
+.pbi-rbac-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.pbi-perm-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
-.asset-metric-chip .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
+.pbi-perm-full {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.3);
 }
 
+.pbi-perm-read {
+  background: rgba(0, 188, 242, 0.15);
+  color: #00BCF2;
+  border: 1px solid rgba(0, 188, 242, 0.3);
+}
 
+.pbi-perm-exec {
+  background: rgba(242, 200, 17, 0.15);
+  color: #F2C811;
+  border: 1px solid rgba(242, 200, 17, 0.3);
+}
 
+.pbi-perm-none {
+  background: rgba(100, 116, 139, 0.15);
+  color: #94A3B8;
+  border: 1px solid rgba(100, 116, 139, 0.25);
+}
