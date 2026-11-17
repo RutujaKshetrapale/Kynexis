@@ -1,9 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth, SEED_USERS } from './context/AuthContext';
-import { useBackendStatus } from './services/api';
+import { useBackendStatus, alertsApi } from './services/api';
 import LoadingSpinner from './components/LoadingSpinner';
+import Sidebar from './components/Sidebar';
 import LoginView from './views/LoginView';
-import { LogOut, User, RefreshCw, Shield, BarChart3, Cpu, HardHat, Check } from 'lucide-react';
+import AdminView from './views/AdminView';
+import PlantsView from './views/PlantsView';
+import MachinesView from './views/MachinesView';
+import ProductionView from './views/ProductionView';
+import EnergyView from './views/EnergyView';
+import MaintenanceView from './views/MaintenanceView';
+import AlertsView from './views/AlertsView';
+import TelemetryView from './views/TelemetryView';
+import SensorsView from './views/SensorsView';
+import {
+  LogOut,
+  RefreshCw,
+  Shield,
+  BarChart3,
+  Cpu,
+  HardHat,
+  Check,
+  Building2,
+  Layers,
+  Zap,
+  Wrench,
+  AlertTriangle,
+  Activity,
+  Gauge
+} from 'lucide-react';
 
 const ROLE_THEMES = {
   ADMIN: { color: '#F2C811', bg: 'rgba(242, 200, 17, 0.12)', border: 'rgba(242, 200, 17, 0.35)', icon: Shield },
@@ -12,10 +37,36 @@ const ROLE_THEMES = {
   OPERATOR: { color: '#10B981', bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.35)', icon: HardHat }
 };
 
+const PAGE_METADATA = {
+  admin: { title: 'Administration Console', icon: Shield, color: '#F2C811' },
+  plants: { title: 'Manufacturing Plants & Facilities Master', icon: Building2, color: '#10B981' },
+  machines: { title: 'Machine Fleet & Asset Diagnostics', icon: Cpu, color: '#00BCF2' },
+  production: { title: 'Production Batches & Yield Analytics', icon: Layers, color: '#A855F7' },
+  energy: { title: 'Energy & Electrical Demand Analytics', icon: Zap, color: '#EAB308' },
+  maintenance: { title: 'Maintenance & Machine Health Diagnostics', icon: Wrench, color: '#EC4899' },
+  alerts: { title: 'System Alerts', icon: AlertTriangle, color: '#EF4444' },
+  telemetry: { title: 'Real-Time Sensor Telemetry Feeds', icon: Activity, color: '#38BDF8' },
+  sensors: { title: 'Sensor Calibration & Threshold Matrix', icon: Gauge, color: '#F59E0B' }
+};
+
 export default function App() {
   const { user, loading, logout, switchDemoUser } = useAuth();
   const { isLive } = useBackendStatus();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
+  const [activePage, setActivePage] = useState('admin');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [unresolvedAlertsCount, setUnresolvedAlertsCount] = useState(0);
+
+  // Sync alerts badge
+  useEffect(() => {
+    if (!user) return;
+    alertsApi.getUnresolved()
+      .then(res => {
+        const count = Array.isArray(res) ? res.length : (res?.content?.length || 0);
+        setUnresolvedAlertsCount(count);
+      })
+      .catch(() => {});
+  }, [user, activePage]);
 
   // If user is not authenticated, display the Power BI Login View
   if (!user) {
@@ -25,6 +76,7 @@ export default function App() {
   const roleKey = (user.role || 'ADMIN').toUpperCase();
   const roleTheme = ROLE_THEMES[roleKey] || ROLE_THEMES.ADMIN;
   const RoleIcon = roleTheme.icon;
+  const currentPageInfo = PAGE_METADATA[activePage] || PAGE_METADATA.admin;
 
   return (
     <div className="pbi-report-layout">
@@ -42,7 +94,9 @@ export default function App() {
               <div className="pbi-report-breadcrumb">
                 <span>Manufacturing Analytics</span>
                 <span>&gt;</span>
-                <span style={{ color: '#FFFFFF', fontWeight: 600 }}>Active Session</span>
+                <span style={{ color: '#FFFFFF', fontWeight: 600 }}>
+                  {currentPageInfo.title}
+                </span>
               </div>
             </div>
           </div>
@@ -125,7 +179,7 @@ export default function App() {
                   top: '100%',
                   right: 0,
                   marginTop: '6px',
-                  width: '220px',
+                  width: '240px',
                   background: '#182030',
                   border: '1px solid var(--pbi-border)',
                   borderRadius: '6px',
@@ -198,93 +252,49 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Report Canvas */}
-      <main className="pbi-canvas-main" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{
-          maxWidth: '680px',
-          width: '100%',
-          background: 'var(--pbi-visual-bg)',
-          border: '1px solid var(--pbi-border)',
-          borderRadius: '8px',
-          padding: '36px 32px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-          textAlign: 'center'
-        }}>
-          <div style={{
-            width: '56px',
-            height: '56px',
-            borderRadius: '12px',
-            background: roleTheme.bg,
-            border: `1px solid ${roleTheme.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            margin: '0 auto 20px',
-            color: roleTheme.color,
-            fontSize: '26px'
-          }}>
-            <RoleIcon size={28} />
-          </div>
+      {/* Main Layout Body: Sidebar + Main Content */}
+      <div className="pbi-layout-body">
+        {/* Navigation Sidebar */}
+        <Sidebar
+          activeView={activePage}
+          onSelectView={setActivePage}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          unresolvedAlertsCount={unresolvedAlertsCount}
+        />
 
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '3px 10px',
-            borderRadius: '12px',
-            background: roleTheme.bg,
-            color: roleTheme.color,
-            border: `1px solid ${roleTheme.border}`,
-            fontSize: '11px',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            marginBottom: '10px'
-          }}>
-            Active Role: {roleKey}
-          </div>
+        {/* Dynamic Report View */}
+        <main className="pbi-canvas-main" style={{ overflowY: 'auto', flex: 1 }}>
+          {activePage === 'admin' && <AdminView />}
+          {activePage === 'plants' && <PlantsView />}
+          {activePage === 'machines' && <MachinesView />}
+          {activePage === 'production' && <ProductionView />}
+          {activePage === 'energy' && <EnergyView />}
+          {activePage === 'maintenance' && <MaintenanceView />}
+          {activePage === 'alerts' && <AlertsView />}
+          {activePage === 'telemetry' && <TelemetryView />}
+          {activePage === 'sensors' && <SensorsView />}
+        </main>
+      </div>
 
-          <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#FFFFFF', marginBottom: '8px' }}>
-            Authenticated as {user.username}
-          </h1>
-
-          <p style={{ fontSize: '13px', color: '#94A3B8', lineHeight: 1.6, marginBottom: '24px' }}>
-            Login successfully validated against the Spring Boot Gateway (:8080) and MySQL database with active JWT token.
-          </p>
-
-          <div style={{
-            background: '#0E1422',
-            border: '1px solid var(--pbi-border)',
-            borderRadius: '6px',
-            padding: '16px 20px',
-            fontSize: '12.5px',
-            color: '#CBD5E1',
-            textAlign: 'left',
-            lineHeight: 1.7
-          }}>
-            <div style={{ fontWeight: 700, color: roleTheme.color, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>Role Permissions &amp; Next Step:</span>
-            </div>
-            <div>
-              {roleKey === 'ADMIN' && '👑 You have full governance authority across all 10 microservices, plants, and machines.'}
-              {roleKey === 'MANAGER' && '📊 You have access to executive OEE dashboards, production scheduling, and energy metrics.'}
-              {roleKey === 'ENGINEER' && '⚙️ You have access to live sensor calibration, telemetry diagnostics, and machine health.'}
-              {roleKey === 'OPERATOR' && '🏭 You have access to shop floor workstation execution, batch logs, and incident reporting.'}
-            </div>
-
-            <div style={{ marginTop: '14px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>Test another persona?</span>
-              <button
-                type="button"
-                className="pbi-ribbon-btn"
-                onClick={logout}
-                style={{ fontSize: '11px', padding: '3px 10px' }}
-              >
-                Sign Out to Role Picker
-              </button>
-            </div>
-          </div>
-        </div>
-      </main>
+      {/* Bottom Power BI Page Tabs Bar */}
+      <footer className="pbi-page-tabs-bar">
+        {Object.entries(PAGE_METADATA).map(([key, meta]) => {
+          const TabIcon = meta.icon;
+          const isActive = activePage === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={`pbi-page-tab ${isActive ? 'active' : ''}`}
+              onClick={() => setActivePage(key)}
+            >
+              <TabIcon size={13} color={meta.color} />
+              <span>{meta.title.split(' ')[0]} {meta.title.split(' ')[1]}</span>
+            </button>
+          );
+        })}
+      </footer>
     </div>
   );
 }

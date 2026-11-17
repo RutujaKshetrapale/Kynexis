@@ -38,7 +38,7 @@ public class PlantService {
         Plant plant = Plant.builder()
                 .name(request.getName().trim())
                 .location(request.getLocation().trim())
-                .active(true)
+                .active(request.getActive() != null ? request.getActive() : true)
                 .build();
 
         Plant saved = plantRepository.save(plant);
@@ -135,6 +135,9 @@ public class PlantService {
 
         plant.setName(request.getName().trim());
         plant.setLocation(request.getLocation().trim());
+        if (request.getActive() != null) {
+            plant.setActive(request.getActive());
+        }
 
         Plant updated = plantRepository.save(plant);
         log.info("Plant updated successfully id={}", id);

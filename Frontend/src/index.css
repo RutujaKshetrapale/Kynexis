@@ -225,16 +225,126 @@ body {
   color: var(--pbi-blue);
 }
 
+/* ============================================================
+   Power BI Radiant Online & Offline Status Badges
+   ============================================================ */
 .pbi-status-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   font-size: 11px;
-  color: var(--pbi-text-secondary);
-  padding: 3px 8px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.03);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 4px 10px;
+  border-radius: 20px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--pbi-border-subtle);
+  color: var(--pbi-text-secondary);
+}
+
+.pbi-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ONLINE STATUS */
+.pbi-status-online,
+.pbi-status-running {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #34D399;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.pbi-status-online .pbi-status-dot,
+.pbi-status-running .pbi-status-dot {
+  background: #10B981;
+  box-shadow: 0 0 8px #10B981, 0 0 16px rgba(16, 185, 129, 0.7);
+  animation: pbi-pulse-online 2s infinite ease-in-out;
+}
+
+@keyframes pbi-pulse-online {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.35);
+    opacity: 0.75;
+  }
+}
+
+/* OFFLINE STATUS */
+.pbi-status-offline {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.18) 0%, rgba(185, 28, 28, 0.1) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #FCA5A5;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.pbi-status-offline .pbi-status-dot {
+  background: #EF4444;
+  box-shadow: 0 0 8px #EF4444, 0 0 14px rgba(239, 68, 68, 0.6);
+}
+
+/* IDLE & MAINTENANCE BADGES */
+.pbi-status-idle {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18) 0%, rgba(217, 119, 6, 0.1) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.5);
+  color: #FCD34D;
+  box-shadow: 0 2px 10px rgba(245, 158, 11, 0.15);
+}
+
+.pbi-status-idle .pbi-status-dot {
+  background: #F59E0B;
+  box-shadow: 0 0 8px #F59E0B;
+}
+
+.pbi-status-maintenance {
+  background: linear-gradient(135deg, rgba(236, 72, 153, 0.18) 0%, rgba(190, 24, 93, 0.1) 100%);
+  border: 1px solid rgba(236, 72, 153, 0.5);
+  color: #F9A8D4;
+  box-shadow: 0 2px 10px rgba(236, 72, 153, 0.15);
+}
+
+.pbi-status-maintenance .pbi-status-dot {
+  background: #EC4899;
+  box-shadow: 0 0 8px #EC4899;
+}
+
+/* TOGGLE ACTION BUTTONS */
+.pbi-btn-toggle-online {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.45);
+  color: #34D399;
+  font-weight: 700;
+}
+
+.pbi-btn-toggle-online:hover:not(:disabled) {
+  background: #10B981;
+  color: #0E131E;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+}
+
+.pbi-btn-toggle-offline {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.45);
+  color: #FCA5A5;
+  font-weight: 700;
+}
+
+.pbi-btn-toggle-offline:hover:not(:disabled) {
+  background: #EF4444;
+  color: #FFFFFF;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
 }
 
 /* ============================================================
@@ -299,6 +409,116 @@ body {
   background: var(--pbi-blue);
   color: #FFFFFF;
   box-shadow: 0 1px 4px rgba(17, 141, 255, 0.4);
+}
+
+/* ============================================================
+   Power BI Slicer Pills (ALL, ONLINE, OFFLINE Status Chiclets)
+   ============================================================ */
+.pbi-slicer-pill-container {
+  display: inline-flex;
+  align-items: center;
+  background: #0B101D;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 3px;
+  gap: 3px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.pbi-slicer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94A3B8;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  user-select: none;
+  font-family: inherit;
+}
+
+.pbi-slicer-pill:hover:not(.active) {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Generic Active */
+.pbi-slicer-pill.active {
+  background: linear-gradient(135deg, rgba(17, 141, 255, 0.22) 0%, rgba(0, 188, 242, 0.15) 100%);
+  border: 1px solid #00BCF2;
+  color: #38BDF8;
+  box-shadow: 0 0 12px rgba(0, 188, 242, 0.35);
+}
+
+/* Specific Pill Variants */
+.pbi-slicer-pill-all.active {
+  background: linear-gradient(135deg, rgba(17, 141, 255, 0.25) 0%, rgba(0, 188, 242, 0.18) 100%);
+  border: 1px solid #00BCF2;
+  color: #38BDF8;
+  box-shadow: 0 0 12px rgba(0, 188, 242, 0.35);
+}
+
+.pbi-slicer-pill-online.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.28) 0%, rgba(5, 150, 105, 0.18) 100%);
+  border: 1px solid #10B981;
+  color: #34D399;
+  box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+}
+
+.pbi-slicer-pill-offline.active {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.28) 0%, rgba(185, 28, 28, 0.18) 100%);
+  border: 1px solid #EF4444;
+  color: #F87171;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.4);
+}
+
+/* Dot indicator inside slicer pill */
+.pbi-slicer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.pbi-slicer-dot-all {
+  background: #38BDF8;
+  box-shadow: 0 0 6px #00BCF2;
+}
+
+.pbi-slicer-dot-online {
+  background: #34D399;
+  box-shadow: 0 0 8px #10B981;
+  animation: pulse-dot 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+.pbi-slicer-dot-offline {
+  background: #EF4444;
+  box-shadow: 0 0 8px #EF4444;
+}
+
+/* Slicer badge count */
+.pbi-slicer-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #CBD5E1;
+  margin-left: 2px;
+}
+
+.pbi-slicer-pill.active .pbi-slicer-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
 }
 
 /* ============================================================
@@ -710,7 +930,7 @@ body {
   display: flex;
   flex-direction: column;
   background-color: #0B0E17;
-  background-image: 
+  background-image:
     radial-gradient(circle at 15% 20%, rgba(242, 200, 17, 0.05) 0%, transparent 40%),
     radial-gradient(circle at 85% 80%, rgba(17, 141, 255, 0.06) 0%, transparent 45%),
     linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
@@ -1163,4 +1383,547 @@ body {
   background: rgba(100, 116, 139, 0.15);
   color: #94A3B8;
   border: 1px solid rgba(100, 116, 139, 0.25);
+}
+
+
+/* ============================================================
+   Power BI Admin Console & Governance Design Elements
+   ============================================================ */
+.pbi-admin-container {
+  padding: 20px 24px 40px;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.pbi-admin-top-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--pbi-visual-bg);
+  border: 1px solid var(--pbi-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.pbi-admin-top-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.pbi-admin-top-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(242, 200, 17, 0.12);
+  color: #F2C811;
+  border: 1px solid rgba(242, 200, 17, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pbi-admin-top-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.pbi-admin-top-desc {
+  font-size: 12px;
+  color: var(--pbi-text-secondary);
+}
+
+.pbi-admin-auth-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.pbi-admin-auth-granted {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.pbi-admin-auth-denied {
+  background: rgba(216, 59, 1, 0.15);
+  color: #FF7B60;
+  border: 1px solid rgba(216, 59, 1, 0.35);
+}
+
+/* Guard banner when non-admin accesses */
+.pbi-guard-banner {
+  background: rgba(216, 59, 1, 0.12);
+  border: 1px solid rgba(216, 59, 1, 0.4);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.pbi-guard-banner-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: rgba(216, 59, 1, 0.2);
+  color: #FF7B60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Admin Subtabs (Chiclet Navigation) */
+.pbi-admin-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.pbi-admin-tab-btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: var(--pbi-visual-bg);
+  border: 1px solid var(--pbi-border);
+  color: var(--pbi-text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.pbi-admin-tab-btn:hover {
+  background: #1F2A3E;
+  color: #FFFFFF;
+  border-color: #384A6E;
+}
+
+.pbi-admin-tab-btn.active {
+  background: #25334D;
+  color: #FFFFFF;
+  border-color: var(--pbi-gold);
+  box-shadow: 0 0 0 1px var(--pbi-gold);
+}
+
+/* Microservice Mesh Grid */
+.pbi-mesh-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1280px) {
+  .pbi-mesh-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .pbi-mesh-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .pbi-mesh-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pbi-mesh-card {
+  background: #141B29;
+  border: 1px solid var(--pbi-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.pbi-mesh-card:hover {
+  border-color: var(--pbi-blue);
+  background: #182234;
+}
+
+.pbi-mesh-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.pbi-mesh-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.pbi-mesh-card-port {
+  font-family: var(--pbi-font-mono);
+  font-size: 10px;
+  color: var(--pbi-gold);
+  background: rgba(242, 200, 17, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid rgba(242, 200, 17, 0.2);
+}
+
+.pbi-mesh-card-route {
+  font-size: 11px;
+  color: #94A3B8;
+  font-family: var(--pbi-font-mono);
+  margin-bottom: 8px;
+}
+
+/* Modal Popup Window */
+.pbi-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 14, 0.75);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.pbi-modal-window {
+  width: 100%;
+  max-width: 520px;
+  background: #161E2D;
+  border: 1px solid #364663;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  animation: modal-enter 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modal-enter {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.pbi-modal-header {
+  padding: 14px 20px;
+  background: #1C263A;
+  border-bottom: 1px solid var(--pbi-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pbi-modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pbi-modal-close {
+  background: none;
+  border: none;
+  color: var(--pbi-text-secondary);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.pbi-modal-close:hover {
+  color: #FFFFFF;
+}
+
+.pbi-modal-body {
+  padding: 20px;
+}
+
+.pbi-modal-footer {
+  padding: 12px 20px;
+  background: #121824;
+  border-top: 1px solid var(--pbi-border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Action Button Small */
+.pbi-btn-action-sm {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.pbi-btn-action-danger {
+  background: rgba(216, 59, 1, 0.12);
+  border: 1px solid rgba(216, 59, 1, 0.35);
+  color: #FF7B60;
+}
+
+.pbi-btn-action-danger:hover:not(:disabled) {
+  background: rgba(216, 59, 1, 0.25);
+  color: #FFFFFF;
+}
+
+.pbi-btn-action-primary {
+  background: rgba(17, 141, 255, 0.15);
+  border: 1px solid rgba(17, 141, 255, 0.4);
+  color: #00BCF2;
+}
+
+.pbi-btn-action-primary:hover:not(:disabled) {
+  background: rgba(17, 141, 255, 0.3);
+  color: #FFFFFF;
+}
+
+.pbi-btn-action-gold {
+  background: linear-gradient(135deg, #F2C811 0%, #D4A700 100%);
+  border: none;
+  color: #0F131E;
+  font-weight: 700;
+}
+
+.pbi-btn-action-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #FFD41D 0%, #E5B500 100%);
+  box-shadow: 0 2px 10px rgba(242, 200, 17, 0.3);
+}
+
+.pbi-toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 18px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  animation: modal-enter 0.25s ease;
+}
+
+.pbi-toast-success {
+  background: #0E3524;
+  border: 1px solid #10B981;
+  color: #D1FAE5;
+}
+
+.pbi-toast-error {
+  background: #3B120F;
+  border: 1px solid #D83B01;
+  color: #FFE4E0;
+}
+
+
+/* ============================================================
+   Power BI Workspace Navigation Sidebar
+   ============================================================ */
+.pbi-layout-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  height: calc(100vh - 44px - 38px);
+}
+
+.pbi-sidebar {
+  width: 220px;
+  background: #121826;
+  border-right: 1px solid var(--pbi-border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+  z-index: 80;
+  flex-shrink: 0;
+}
+
+.pbi-sidebar.collapsed {
+  width: 60px;
+}
+
+.pbi-sidebar-header {
+  height: 42px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--pbi-border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pbi-sidebar-workspace-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--pbi-gold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pbi-sidebar-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--pbi-text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.pbi-sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+}
+
+.pbi-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pbi-sidebar-section {
+  margin-top: 12px;
+  margin-bottom: 4px;
+  padding: 0 8px;
+}
+
+.pbi-sidebar-section-title {
+  font-size: 9.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748B;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pbi-sidebar-item {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  color: var(--pbi-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  position: relative;
+  text-decoration: none;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.pbi-sidebar-item:hover {
+  background: #1B2437;
+  color: #FFFFFF;
+}
+
+.pbi-sidebar-item.active {
+  background: #202C44;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.pbi-sidebar-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--pbi-gold);
+}
+
+.pbi-sidebar-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pbi-sidebar-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pbi-sidebar-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(216, 59, 1, 0.2);
+  color: #FF7B60;
+  border: 1px solid rgba(216, 59, 1, 0.4);
+}
+
+.pbi-sidebar-footer {
+  padding: 10px 12px;
+  border-top: 1px solid var(--pbi-border-subtle);
+  background: #0E131E;
 }
