@@ -34,8 +34,10 @@ const MACHINE_STATUSES = [
 ];
 
 export default function MachinesView() {
-  const { hasRole, user } = useAuth();
+  const { hasRole, user, assignedPlantId } = useAuth();
   const isAdmin = hasRole('ADMIN') || hasRole('ENGINEER') || user?.role === 'ADMIN' || user?.role === 'ENGINEER';
+  const canDelete = hasRole('ADMIN') || user?.role === 'ADMIN';
+  const isOperator = (user?.role || '').toUpperCase() === 'OPERATOR';
 
   const [machines, setMachines] = useState([]);
   const [plants, setPlants] = useState([]);
@@ -273,9 +275,10 @@ export default function MachinesView() {
     const matchesStatus = statusFilter === 'ALL' || m.status === statusFilter;
     const matchesType = typeFilter === 'ALL' || (m.type || '').toUpperCase() === typeFilter;
     const plantId = String(m.plantId || m.plant?.id || '');
+    const matchesOperatorScope = !isOperator || plantId === String(assignedPlantId);
     const matchesPlant = plantFilter === 'ALL' || plantId === String(plantFilter);
 
-    return matchesSearch && matchesStatus && matchesType && matchesPlant;
+    return matchesSearch && matchesStatus && matchesType && matchesPlant && matchesOperatorScope;
   });
 
   return (
@@ -457,18 +460,20 @@ export default function MachinesView() {
           <table className="pbi-matrix-table" style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ width: '85px', padding: '12px 14px' }}>Asset ID</th>
-                <th style={{ padding: '12px 14px' }}>Machine Asset &amp; Type</th>
-                <th style={{ padding: '12px 14px' }}>Allocated Facility</th>
-                <th style={{ width: '120px', padding: '12px 14px' }}>Operating Status</th>
-                <th style={{ width: '160px', padding: '12px 14px' }}>Health Score</th>
-                <th style={{ textAlign: 'right', padding: '12px 14px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '76px', padding: '10px 8px' }}>Asset ID</th>
+                <th style={{ padding: '10px 10px' }}>Machine Asset &amp; Type</th>
+                <th style={{ padding: '10px 10px' }}>Allocated Facility</th>
+                <th style={{ width: '105px', padding: '10px 8px' }}>Status</th>
+                <th style={{ width: '92px', padding: isAdmin ? '10px 8px' : '10px 14px' }}>Health</th>
+                {isAdmin && (
+                  <th style={{ width: '190px', textAlign: 'right', padding: '10px 14px', whiteSpace: 'nowrap' }}>Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {filteredMachines.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
+                  <td colSpan={isAdmin ? 6 : 5} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
                     No machine assets found matching the selected filters.
                     <button
                       type="button"
@@ -491,16 +496,16 @@ export default function MachinesView() {
                 return (
                   <tr key={m.id}>
                     {/* Column 1: ID */}
-                    <td style={{ padding: '14px', fontFamily: 'var(--pbi-font-mono)', color: '#94A3B8', fontWeight: 600 }}>
+                    <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#94A3B8', fontWeight: 600, fontSize: '11.5px', whiteSpace: 'nowrap' }}>
                       MCH-{String(m.id).padStart(3, '0')}
                     </td>
 
                     {/* Column 2: Machine Asset & Classification */}
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <td style={{ padding: '10px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
-                          width: '32px',
-                          height: '32px',
+                          width: '28px',
+                          height: '28px',
                           borderRadius: '6px',
                           background: isRunning ? 'rgba(16, 185, 129, 0.12)' : (isMaint ? 'rgba(239, 68, 68, 0.12)' : 'rgba(245, 158, 11, 0.12)'),
                           border: `1px solid ${isRunning ? 'rgba(16, 185, 129, 0.3)' : (isMaint ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)')}`,
@@ -510,21 +515,21 @@ export default function MachinesView() {
                           color: isRunning ? '#10B981' : (isMaint ? '#EF4444' : '#F59E0B'),
                           flexShrink: 0
                         }}>
-                          <Cpu size={16} />
+                          <Cpu size={14} />
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
                             {m.name}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '3px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
                             <span style={{
                               fontFamily: 'var(--pbi-font-mono)',
-                              fontSize: '10.5px',
+                              fontSize: '10px',
                               fontWeight: 700,
                               color: '#00BCF2',
                               background: 'rgba(0,188,242,0.12)',
                               border: '1px solid rgba(0,188,242,0.3)',
-                              padding: '1px 6px',
+                              padding: '1px 5px',
                               borderRadius: '3px'
                             }}>
                               {m.type || 'CNC'}
@@ -535,15 +540,16 @@ export default function MachinesView() {
                     </td>
 
                     {/* Column 3: Allocated Facility */}
-                    <td style={{ padding: '14px', color: '#CBD5E1' }}>
+                    <td style={{ padding: '10px 10px', color: '#CBD5E1' }}>
                       <div
                         onClick={() => setPlantFilter(plantFilter === String(assignedPlant?.id || m.plantId) ? 'ALL' : String(assignedPlant?.id || m.plantId))}
                         style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                         title="Click to filter machines by this facility"
                       >
-                        <Building2 size={13} color="#10B981" />
+                        <Building2 size={12} color="#10B981" style={{ flexShrink: 0 }} />
                         <span style={{
                           fontWeight: 600,
+                          fontSize: '12.5px',
                           color: '#FFFFFF',
                           textDecoration: plantFilter === String(assignedPlant?.id || m.plantId) ? 'underline' : 'none'
                         }}>
@@ -551,30 +557,24 @@ export default function MachinesView() {
                         </span>
                       </div>
                       {assignedPlant?.location && (
-                        <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px', paddingLeft: '18px' }}>
+                        <div style={{ fontSize: '10.5px', color: '#94A3B8', marginTop: '2px', paddingLeft: '17px' }}>
                           {assignedPlant.location}
                         </div>
                       )}
                     </td>
 
                     {/* Column 4: Operating Status */}
-                    <td style={{ padding: '14px' }}>
+                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
                       <span className={`pbi-status-pill ${statusClass}`}>
                         <span className="pbi-status-dot" />
                         <span>{m.status}</span>
                       </span>
                     </td>
 
-                    {/* Column 5: Health Score */}
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxWidth: '140px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px' }}>
-                          <span style={{ color: '#94A3B8' }}>Health</span>
-                          <span style={{ fontWeight: 700, color: healthScore > 80 ? '#10B981' : (healthScore > 50 ? '#F59E0B' : '#EF4444') }}>
-                            {healthScore}%
-                          </span>
-                        </div>
-                        <div className="pbi-cell-bar-track" style={{ height: '6px', background: '#0E1422', borderRadius: '3px' }}>
+                    {/* Column 5: Health Score (Compact Inline) */}
+                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div className="pbi-cell-bar-track" style={{ width: '44px', height: '5px', background: '#0E1422', borderRadius: '3px', flexShrink: 0 }}>
                           <div
                             className="pbi-cell-bar-fill"
                             style={{
@@ -584,52 +584,53 @@ export default function MachinesView() {
                             }}
                           />
                         </div>
+                        <span style={{ fontWeight: 700, fontSize: '11px', fontFamily: 'var(--pbi-font-mono)', color: healthScore > 80 ? '#10B981' : (healthScore > 50 ? '#F59E0B' : '#EF4444') }}>
+                          {healthScore}%
+                        </span>
                       </div>
                     </td>
 
-                    {/* Column 6: Authorizations & Actions - STRICTLY ONE LINE */}
-                    <td style={{ padding: '14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'nowrap' }}>
-                        {/* Quick Status Toggle Button */}
-                        <button
-                          type="button"
-                          className={`pbi-btn-action-sm ${isRunning ? 'pbi-btn-toggle-offline' : 'pbi-btn-toggle-online'}`}
-                          disabled={!isAdmin}
-                          onClick={() => handleToggleStatus(m)}
-                          title={isRunning ? 'Mark machine as IDLE' : 'Start machine production (RUNNING)'}
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <Power size={11} />
-                          <span>{isRunning ? 'Set Idle' : 'Start Run'}</span>
-                        </button>
+                    {/* Column 6: Authorizations & Actions - Admin/Engineer Only */}
+                    {isAdmin && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', flexWrap: 'nowrap' }}>
+                          {/* Quick Status Toggle Button */}
+                          <button
+                            type="button"
+                            className={`pbi-btn-action-sm ${isRunning ? 'pbi-btn-toggle-offline' : 'pbi-btn-toggle-online'}`}
+                            onClick={() => handleToggleStatus(m)}
+                            title={isRunning ? 'Mark machine as IDLE' : 'Start machine production (RUNNING)'}
+                          >
+                            <Power size={11} />
+                            <span>{isRunning ? 'Idle' : 'Start'}</span>
+                          </button>
 
-                        {/* Edit Button */}
-                        <button
-                          type="button"
-                          className="pbi-btn-action-sm pbi-btn-action-primary"
-                          disabled={!isAdmin}
-                          onClick={() => handleOpenEdit(m)}
-                          title="Edit machine parameters"
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <Pencil size={11} />
-                          <span>Edit</span>
-                        </button>
+                          {/* Edit Button */}
+                          <button
+                            type="button"
+                            className="pbi-btn-action-sm pbi-btn-action-primary"
+                            onClick={() => handleOpenEdit(m)}
+                            title="Edit machine parameters"
+                          >
+                            <Pencil size={11} />
+                            <span>Edit</span>
+                          </button>
 
-                        {/* Delete Button */}
-                        <button
-                          type="button"
-                          className="pbi-btn-action-sm pbi-btn-action-danger"
-                          disabled={!isAdmin}
-                          onClick={() => handleDelete(m)}
-                          title="Decommission machine (Admin authorization required)"
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <Trash2 size={11} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </td>
+                          {/* Delete Button (Admin Only) */}
+                          {canDelete && (
+                            <button
+                              type="button"
+                              className="pbi-btn-action-sm pbi-btn-action-danger"
+                              onClick={() => handleDelete(m)}
+                              title="Decommission machine (Admin authorization required)"
+                            >
+                              <Trash2 size={11} />
+                              <span>Delete</span>
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

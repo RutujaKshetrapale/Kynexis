@@ -721,6 +721,49 @@ export const alertsApi = {
       window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'resolved', id } }));
     } catch { }
     return result;
+  },
+
+  update: async (id, alert) => {
+    const alertType = alert.type || alert.alertType || 'HIGH_TEMPERATURE';
+    const payload = {
+      machineId: Number(alert.machineId || 1),
+      type: alertType,
+      alertType: alertType,
+      severity: alert.severity || 'WARNING',
+      message: (alert.message && alert.message.trim())
+        ? alert.message.trim()
+        : `${alertType} anomaly detected on Machine #${alert.machineId || 1}`,
+      resolved: Boolean(alert.resolved)
+    };
+    let result;
+    if (isDemoMode()) {
+      const idx = mockStore.data.alerts.findIndex(item => item.id === Number(id));
+      if (idx !== -1) {
+        mockStore.data.alerts[idx] = { ...mockStore.data.alerts[idx], ...payload };
+        result = mockStore.data.alerts[idx];
+      }
+    } else {
+      result = await request(`/api/alerts/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload)
+      });
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'updated', alert: result } }));
+    } catch { }
+    return result;
+  },
+
+  delete: async (id) => {
+    if (isDemoMode()) {
+      mockStore.data.alerts = mockStore.data.alerts.filter(item => item.id !== Number(id));
+    } else {
+      await request(`/api/alerts/${id}`, { method: 'DELETE' });
+    }
+    try {
+      window.dispatchEvent(new CustomEvent('kynexis-alerts-updated', { detail: { action: 'deleted', id } }));
+    } catch { }
+    return null;
   }
 };
 

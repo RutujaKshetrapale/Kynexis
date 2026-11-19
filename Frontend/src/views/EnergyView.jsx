@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import {
   Zap,
-  Activity,
-  TrendingDown,
-  DollarSign,
-  RefreshCw,
-  Gauge,
-  Clock,
-  Building2
+  RefreshCw
 } from 'lucide-react';
-import { energyApi } from '../services/api';
+import { energyApi, machinesApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function EnergyView() {
+  const { user, assignedPlantId } = useAuth();
+  const isOperator = (user?.role || '').toUpperCase() === 'OPERATOR';
+
   const [readings, setReadings] = useState([]);
-  const [metrics, setMetrics] = useState(null);
+  const [machines, setMachines] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [energyData, metricsData] = await Promise.all([
+      const [energyData, machData] = await Promise.all([
         energyApi.getAll().catch(() => []),
-        energyApi.getMetricsSummary().catch(() => null)
+        machinesApi.getAll().catch(() => [])
       ]);
       setReadings(Array.isArray(energyData) ? energyData : (energyData?.content || []));
-      setMetrics(metricsData);
+      setMachines(Array.isArray(machData) ? machData : (machData?.content || []));
     } finally {
       setLoading(false);
     }
@@ -34,11 +32,12 @@ export default function EnergyView() {
     fetchData();
   }, []);
 
-  const totalKw = readings.reduce((acc, r) => acc + Number(r.activePower || r.powerConsumption || 0), 0);
-  const avgPf = readings.length > 0
-    ? (readings.reduce((acc, r) => acc + Number(r.powerFactor || 0.95), 0) / readings.length).toFixed(2)
-    : '0.96';
-  const peakDemand = readings.reduce((max, r) => Math.max(max, Number(r.peakDemand || r.activePower || 0)), 0) || (totalKw * 1.25).toFixed(1);
+  const operatorMachineIds = new Set(
+    machines.filter(m => Number(m.plantId || m.plant?.id || 1) === Number(assignedPlantId)).map(m => Number(m.id))
+  );
+  const visibleReadings = isOperator
+    ? readings.filter(r => operatorMachineIds.has(Number(r.machineId || r.machine?.id)))
+    : readings;
 
   return (
     <div className="pbi-admin-container">
@@ -50,9 +49,6 @@ export default function EnergyView() {
           </div>
           <div>
             <div className="pbi-admin-top-title">Energy &amp; Electrical Demand Analytics</div>
-            <div className="pbi-admin-top-desc">
-              Continuous power consumption, power factor efficiency &amp; tariff curves from Energy Service (:8087)
-            </div>
           </div>
         </div>
 
@@ -62,123 +58,81 @@ export default function EnergyView() {
         </button>
       </div>
 
-      {/* KPI Deck */}
-      <div className="pbi-kpi-deck" style={{ marginBottom: '20px' }}>
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#EAB308' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Active Power Load</span>
-            <Zap size={16} color="#EAB308" />
-          </div>
-          <div className="pbi-kpi-value">{totalKw.toFixed(1)} kW</div>
-          <div className="pbi-kpi-subtext" style={{ color: '#EAB308' }}>
-            <span>Real-time Combined Fleet Draw</span>
-          </div>
-        </div>
-
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#10B981' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Average Power Factor</span>
-            <Gauge size={16} color="#10B981" />
-          </div>
-          <div className="pbi-kpi-value">{avgPf}</div>
-          <div className="pbi-kpi-subtext" style={{ color: '#10B981' }}>
-            <span>Target: &gt;0.95 (High Efficiency)</span>
-          </div>
-        </div>
-
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#EC4899' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Peak Demand</span>
-            <Activity size={16} color="#EC4899" />
-          </div>
-          <div className="pbi-kpi-value">{Number(peakDemand).toFixed(1)} kW</div>
-          <div className="pbi-kpi-subtext" style={{ color: '#EC4899' }}>
-            <span>Peak Tariff Window</span>
-          </div>
-        </div>
-
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#00BCF2' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Active Meter Feeds</span>
-            <Clock size={16} color="#00BCF2" />
-          </div>
-          <div className="pbi-kpi-value">{readings.length}</div>
-          <div className="pbi-kpi-subtext" style={{ color: '#00BCF2' }}>
-            <span>Sub-meter Data Streams</span>
-          </div>
-        </div>
-      </div>
-
       {/* Matrix Table */}
-      <div className="pbi-visual-card">
+      <div className="pbi-visual-card" style={{ width: '100%', boxSizing: 'border-box' }}>
         <div className="pbi-visual-header">
           <div>
             <div className="pbi-visual-title">Continuous Power Consumption Matrix</div>
-            <div className="pbi-visual-subtitle">High-frequency submeter feeds, reactive current and power factor tracking</div>
           </div>
         </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table className="pbi-matrix-table">
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table className="pbi-matrix-table" style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ width: '80px' }}>Meter ID</th>
-                <th>Monitored Machine Asset</th>
-                <th>Active Power (kW)</th>
-                <th>Power Consumption Bar</th>
-                <th>Power Factor</th>
-                <th>Voltage (V)</th>
-                <th>Current (A)</th>
-                <th>Timestamp</th>
+                <th style={{ width: '76px', padding: '10px 8px' }}>Meter ID</th>
+                <th style={{ padding: '10px 10px' }}>Machine Asset</th>
+                <th style={{ width: '86px', padding: '10px 8px' }}>Power</th>
+                <th style={{ width: '110px', padding: '10px 8px' }}>Load</th>
+                <th style={{ width: '62px', padding: '10px 8px' }}>PF</th>
+                <th style={{ width: '80px', padding: '10px 8px' }}>Voltage</th>
+                <th style={{ width: '76px', padding: '10px 8px' }}>Current</th>
+                <th style={{ width: '105px', padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>Timestamp</th>
               </tr>
             </thead>
             <tbody>
-              {readings.map((r) => {
+              {visibleReadings.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
+                    No energy meter readings available.
+                  </td>
+                </tr>
+              )}
+              {visibleReadings.map((r) => {
                 const kw = Number(r.activePower || r.powerConsumption || 24.5);
                 const pf = Number(r.powerFactor || 0.95);
                 const barWidth = Math.min(100, Math.round((kw / 50) * 100));
 
                 return (
                   <tr key={r.id}>
-                    <td style={{ fontFamily: 'var(--pbi-font-mono)', color: '#EAB308', fontWeight: 700 }}>
-                      MTR-{r.id}
+                    <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#EAB308', fontWeight: 700, fontSize: '11.5px', whiteSpace: 'nowrap' }}>
+                      MTR-{String(r.id).padStart(3, '0')}
                     </td>
-                    <td style={{ fontWeight: 600, color: '#FFFFFF' }}>
+                    <td style={{ padding: '10px 10px', fontWeight: 600, color: '#FFFFFF', fontSize: '12.5px' }}>
                       Machine #{r.machineId || (r.machine && r.machine.id) || '1'}
                     </td>
-                    <td style={{ fontFamily: 'var(--pbi-font-mono)', fontWeight: 700, color: '#FFFFFF' }}>
+                    <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', fontWeight: 700, color: '#FFFFFF', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       {kw.toFixed(1)} kW
                     </td>
-                    <td style={{ width: '200px' }}>
-                      <div className="pbi-data-bar-wrap">
-                        <div className="pbi-data-bar-track">
-                          <div
-                            className="pbi-data-bar-fill"
-                            style={{
-                              width: `${barWidth}%`,
-                              background: kw > 35 ? '#EF4444' : (kw > 20 ? '#EAB308' : '#10B981')
-                            }}
-                          />
-                        </div>
-                        <span className="pbi-data-bar-value">{kw.toFixed(1)} kW</span>
+                    <td style={{ padding: '10px 8px' }}>
+                      <div className="pbi-cell-bar-track" style={{ width: '86px', height: '6px', background: '#0E1422', borderRadius: '3px' }}>
+                        <div
+                          className="pbi-cell-bar-fill"
+                          style={{
+                            width: `${barWidth}%`,
+                            background: kw > 35 ? '#EF4444' : (kw > 20 ? '#EAB308' : '#10B981'),
+                            borderRadius: '3px'
+                          }}
+                        />
                       </div>
                     </td>
-                    <td>
+                    <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
                       <span style={{
                         color: pf >= 0.95 ? '#10B981' : '#F59E0B',
                         fontFamily: 'var(--pbi-font-mono)',
-                        fontWeight: 700
+                        fontWeight: 700,
+                        fontSize: '12px'
                       }}>
                         {pf.toFixed(2)}
                       </span>
                     </td>
-                    <td style={{ fontFamily: 'var(--pbi-font-mono)', color: '#CBD5E1' }}>
+                    <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#CBD5E1', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       {r.voltage || '415.0'} V
                     </td>
-                    <td style={{ fontFamily: 'var(--pbi-font-mono)', color: '#CBD5E1' }}>
+                    <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#CBD5E1', fontSize: '12px', whiteSpace: 'nowrap' }}>
                       {r.current || '34.2'} A
                     </td>
-                    <td style={{ color: '#64748B', fontSize: '11px' }}>
+                    <td style={{ padding: '10px 14px', color: '#94A3B8', fontSize: '11px', fontFamily: 'var(--pbi-font-mono)', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {r.timestamp ? new Date(r.timestamp).toLocaleTimeString() : 'Live'}
                     </td>
                   </tr>
@@ -191,4 +145,3 @@ export default function EnergyView() {
     </div>
   );
 }
-

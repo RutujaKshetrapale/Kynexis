@@ -1686,17 +1686,18 @@ body {
 
 /* Action Button Small */
 .pbi-btn-action-sm {
-  height: 28px;
-  padding: 0 10px;
+  height: 26px;
+  padding: 0 8px;
   border-radius: 4px;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .pbi-btn-action-danger {
@@ -1927,3 +1928,193 @@ body {
   border-top: 1px solid var(--pbi-border-subtle);
   background: #0E131E;
 }
+
+/* ============================================================
+   Plant Manager Role Theme (Purple Executive Palette)
+   ============================================================ */
+.pbi-report-layout.theme-manager {
+  --pbi-gold: #A855F7;
+  --pbi-purple: #A855F7;
+  --pbi-purple-light: #C084FC;
+  --pbi-purple-dark: #7E22CE;
+}
+
+.pbi-report-layout.theme-manager .pbi-logo-icon {
+  background: linear-gradient(135deg, #A855F7 0%, #7E22CE 100%);
+  box-shadow: 0 1px 8px rgba(168, 85, 247, 0.5);
+}
+
+.pbi-report-layout.theme-manager .pbi-logo-bar {
+  background: #FFFFFF;
+}
+
+.pbi-report-layout.theme-manager .pbi-btn-action-gold {
+  background: linear-gradient(135deg, #A855F7 0%, #7E22CE 100%);
+  color: #FFFFFF;
+}
+
+.pbi-report-layout.theme-manager .pbi-btn-action-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #C084FC 0%, #9333EA 100%);
+  box-shadow: 0 2px 12px rgba(168, 85, 247, 0.4);
+}
+
+.pbi-report-layout.theme-manager .pbi-admin-top-icon {
+  background: rgba(168, 85, 247, 0.14);
+  color: #C084FC;
+  border-color: rgba(168, 85, 247, 0.4);
+}
+
+.pbi-report-layout.theme-manager .pbi-admin-tab-btn.active {
+  background: rgba(168, 85, 247, 0.16);
+  color: #FFFFFF;
+  border-color: #A855F7;
+  box-shadow: 0 0 0 1px #A855F7, 0 0 14px rgba(168, 85, 247, 0.25);
+}
+
+.pbi-report-layout.theme-manager .pbi-sidebar-item.active {
+  background: rgba(168, 85, 247, 0.14);
+}
+
+.pbi-report-layout.theme-manager .pbi-sidebar-item.active::before {
+  background: #A855F7;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.7);
+}
+
+.pbi-manager-auth-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(168, 85, 247, 0.15);
+  color: #D8B4FE;
+  border: 1px solid rgba(168, 85, 247, 0.45);
+}
+
+.pbi-btn-action-purple {
+  background: rgba(168, 85, 247, 0.16);
+  border: 1px solid rgba(168, 85, 247, 0.45);
+  color: #D8B4FE;
+}
+
+.pbi-btn-action-purple:hover:not(:disabled) {
+  background: #A855F7;
+  color: #FFFFFF;
+  box-shadow: 0 0 12px rgba(168, 85, 247, 0.45);
+}
+
+/* ============================================================
+   Lead Engineer Role Theme (Cyan / Electric Blue Palette)
+   ============================================================ */
+.pbi-report-layout.theme-engineer {
+  --pbi-gold: #00BCF2;
+}
+
+.pbi-report-layout.theme-engineer .pbi-logo-icon {
+  background: linear-gradient(135deg, #00BCF2 0%, #0284C7 100%);
+  box-shadow: 0 1px 8px rgba(0, 188, 242, 0.5);
+}
+
+.pbi-report-layout.theme-engineer .pbi-logo-bar {
+  background: #0B1120;
+}
+
+.pbi-report-layout.theme-engineer .pbi-btn-action-gold {
+  background: linear-gradient(135deg, #00BCF2 0%, #0284C7 100%);
+  color: #081220;
+}
+
+.pbi-report-layout.theme-engineer .pbi-btn-action-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%);
+  box-shadow: 0 2px 12px rgba(0, 188, 242, 0.4);
+}
+
+.pbi-report-layout.theme-engineer .pbi-admin-tab-btn.active {
+  background: rgba(0, 188, 242, 0.14);
+  color: #FFFFFF;
+  border-color: #00BCF2;
+  box-shadow: 0 0 0 1px #00BCF2, 0 0 14px rgba(0, 188, 242, 0.25);
+}
+
+.pbi-report-layout.theme-engineer .pbi-sidebar-item.active {
+  background: rgba(0, 188, 242, 0.14);
+}
+
+.pbi-report-layout.theme-engineer .pbi-sidebar-item.active::before {
+  background: #00BCF2;
+  box-shadow: 0 0 8px rgba(0, 188, 242, 0.7);
+}
+
+.pbi-engineer-auth-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(0, 188, 242, 0.15);
+  color: #7DD3FC;
+  border: 1px solid rgba(0, 188, 242, 0.45);
+}
+
+/* ============================================================
+   Floor Operator Role Theme (Emerald Green Palette)
+   ============================================================ */
+.pbi-report-layout.theme-operator {
+  --pbi-gold: #10B981;
+}
+
+.pbi-report-layout.theme-operator .pbi-logo-icon {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  box-shadow: 0 1px 8px rgba(16, 185, 129, 0.5);
+}
+
+.pbi-report-layout.theme-operator .pbi-logo-bar {
+  background: #071612;
+}
+
+.pbi-report-layout.theme-operator .pbi-btn-action-gold {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #061A14;
+}
+
+.pbi-report-layout.theme-operator .pbi-btn-action-gold:hover:not(:disabled) {
+  background: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+  box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+}
+
+.pbi-report-layout.theme-operator .pbi-admin-tab-btn.active {
+  background: rgba(16, 185, 129, 0.14);
+  color: #FFFFFF;
+  border-color: #10B981;
+  box-shadow: 0 0 0 1px #10B981, 0 0 14px rgba(16, 185, 129, 0.25);
+}
+
+.pbi-report-layout.theme-operator .pbi-sidebar-item.active {
+  background: rgba(16, 185, 129, 0.14);
+}
+
+.pbi-report-layout.theme-operator .pbi-sidebar-item.active::before {
+  background: #10B981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.7);
+}
+
+.pbi-operator-auth-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  background: rgba(16, 185, 129, 0.15);
+  color: #6EE7B7;
+  border: 1px solid rgba(16, 185, 129, 0.45);
+}
+

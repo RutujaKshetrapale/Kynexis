@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
   Activity,
-  Thermometer,
-  Gauge,
-  RotateCw,
-  RefreshCw,
-  CheckCircle2,
-  AlertTriangle,
-  Cpu
+  RefreshCw
 } from 'lucide-react';
 import { telemetryApi, machinesApi } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function TelemetryView() {
+  const { user, assignedPlantId } = useAuth();
+  const isOperator = (user?.role || '').toUpperCase() === 'OPERATOR';
+
   const [readings, setReadings] = useState([]);
   const [machines, setMachines] = useState([]);
   const [selectedMachineId, setSelectedMachineId] = useState('ALL');
@@ -37,27 +35,22 @@ export default function TelemetryView() {
     const timer = setInterval(() => {
       telemetryApi.getAll().then(data => {
         setReadings(Array.isArray(data) ? data : (data?.content || []));
-      }).catch(() => {});
+      }).catch(() => { });
     }, 5000);
     return () => clearInterval(timer);
   }, []);
 
-  const filtered = selectedMachineId === 'ALL'
-    ? readings
-    : readings.filter(r => Number(r.machineId) === Number(selectedMachineId));
+  const visibleMachines = isOperator
+    ? machines.filter(m => Number(m.plantId || m.plant?.id || 1) === Number(assignedPlantId))
+    : machines;
+  const visibleMachineIds = new Set(visibleMachines.map(m => Number(m.id)));
+  const roleScopedReadings = isOperator
+    ? readings.filter(r => visibleMachineIds.has(Number(r.machineId)))
+    : readings;
 
-  const avgTemp = readings.length > 0
-    ? (readings.reduce((acc, r) => acc + Number(r.temperature || 0), 0) / readings.length).toFixed(1)
-    : '68.4';
-  const avgVib = readings.length > 0
-    ? (readings.reduce((acc, r) => acc + Number(r.vibration || 0), 0) / readings.length).toFixed(2)
-    : '1.85';
-  const avgPres = readings.length > 0
-    ? (readings.reduce((acc, r) => acc + Number(r.pressure || 0), 0) / readings.length).toFixed(1)
-    : '5.8';
-  const avgRpm = readings.length > 0
-    ? Math.round(readings.reduce((acc, r) => acc + Number(r.rpm || 0), 0) / readings.length)
-    : 2450;
+  const filtered = selectedMachineId === 'ALL'
+    ? roleScopedReadings
+    : roleScopedReadings.filter(r => Number(r.machineId) === Number(selectedMachineId));
 
   return (
     <div className="pbi-admin-container">
@@ -69,9 +62,6 @@ export default function TelemetryView() {
           </div>
           <div>
             <div className="pbi-admin-top-title">Real-Time Sensor Telemetry Feeds</div>
-            <div className="pbi-admin-top-desc">
-              High-frequency multi-axial sensor telemetry time series from Telemetry Service (:8083)
-            </div>
           </div>
         </div>
 
@@ -79,53 +69,6 @@ export default function TelemetryView() {
           <RefreshCw size={13} className={loading ? 'spin-animation' : ''} />
           <span>Refresh</span>
         </button>
-      </div>
-
-      {/* 4 Sensor Telemetry KPI Cards */}
-      <div className="pbi-kpi-deck" style={{ marginBottom: '20px' }}>
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#EF4444' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Fleet Spindle Temp</span>
-            <Thermometer size={16} color="#EF4444" />
-          </div>
-          <div className="pbi-kpi-value">{avgTemp} °C</div>
-          <div className="pbi-kpi-subtext" style={{ color: parseFloat(avgTemp) > 75 ? '#EF4444' : '#10B981' }}>
-            <span>Limit: &lt;80.0 °C</span>
-          </div>
-        </div>
-
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#F59E0B' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Peak Vibration</span>
-            <Activity size={16} color="#F59E0B" />
-          </div>
-          <div className="pbi-kpi-value">{avgVib} mm/s</div>
-          <div className="pbi-kpi-subtext" style={{ color: parseFloat(avgVib) > 3.0 ? '#EF4444' : '#10B981' }}>
-            <span>ISO 10816 Standard</span>
-          </div>
-        </div>
-
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#00BCF2' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Hydraulic Pressure</span>
-            <Gauge size={16} color="#00BCF2" />
-          </div>
-          <div className="pbi-kpi-value">{avgPres} bar</div>
-          <div className="pbi-kpi-subtext" style={{ color: '#00BCF2' }}>
-            <span>Nominal Range: 4-8 bar</span>
-          </div>
-        </div>
-
-        <div className="pbi-kpi-card" style={{ '--card-accent': '#10B981' }}>
-          <div className="pbi-kpi-header">
-            <span className="pbi-kpi-title">Spindle Speed</span>
-            <RotateCw size={16} color="#10B981" />
-          </div>
-          <div className="pbi-kpi-value">{avgRpm.toLocaleString()} RPM</div>
-          <div className="pbi-kpi-subtext" style={{ color: '#10B981' }}>
-            <span>Operational Harmonic</span>
-          </div>
-        </div>
       </div>
 
       {/* Machine Slicer */}
@@ -139,7 +82,7 @@ export default function TelemetryView() {
             onChange={(e) => setSelectedMachineId(e.target.value)}
           >
             <option value="ALL">All Connected Machines</option>
-            {machines.map((m) => (
+            {visibleMachines.map((m) => (
               <option key={m.id} value={m.id}>
                 #{m.id} - {m.name}
               </option>
@@ -153,7 +96,6 @@ export default function TelemetryView() {
         <div className="pbi-visual-header">
           <div>
             <div className="pbi-visual-title">High-Frequency Telemetry Stream</div>
-            <div className="pbi-visual-subtitle">Live time series packets streaming from edge IoT sensors</div>
           </div>
         </div>
 

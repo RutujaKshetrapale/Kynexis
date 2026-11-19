@@ -106,9 +106,44 @@ const getInitialUser = () => {
   return null;
 };
 
+const OPERATOR_PLANTS_STORAGE_KEY = 'kynexis_operator_plants';
+
+function readOperatorPlantsMap() {
+  try {
+    return JSON.parse(localStorage.getItem(OPERATOR_PLANTS_STORAGE_KEY) || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function writeOperatorPlantsMap(map) {
+  try {
+    localStorage.setItem(OPERATOR_PLANTS_STORAGE_KEY, JSON.stringify(map));
+  } catch { }
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getInitialUser);
   const [loading, setLoading] = useState(false);
+  const [operatorPlants, setOperatorPlants] = useState(readOperatorPlantsMap);
+
+  const getOperatorPlantId = (username) => {
+    const key = (username || 'operator').toLowerCase();
+    const val = operatorPlants[key];
+    return val ? Number(val) : 1;
+  };
+
+  const setOperatorPlantAssignment = (username, plantId) => {
+    const key = (username || 'operator').toLowerCase();
+    const numericId = Number(plantId) || 1;
+    setOperatorPlants(prev => {
+      const next = { ...prev, [key]: numericId };
+      writeOperatorPlantsMap(next);
+      return next;
+    });
+  };
+
+  const assignedPlantId = user ? getOperatorPlantId(user.username) : 1;
 
   useEffect(() => {
     // Check if stored token is still valid on startup
@@ -128,7 +163,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = async (username, password) => {
+  const login = async (username, password, assignedPlantOverride = null) => {
     setLoading(true);
     try {
       const res = await authApi.login({ username, password });
@@ -137,6 +172,9 @@ export function AuthProvider({ children }) {
         role: (res.role || 'OPERATOR').toUpperCase(),
         token: res.token
       };
+      if (assignedPlantOverride != null) {
+        setOperatorPlantAssignment(userData.username, assignedPlantOverride);
+      }
       localStorage.setItem('kynexis_token', userData.token);
       localStorage.setItem('kynexis_user', JSON.stringify(userData));
       setUser(userData);
@@ -147,7 +185,11 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (userData) => {
-    return await authApi.register(userData);
+    const res = await authApi.register(userData);
+    if ((userData.role || '').toUpperCase() === 'OPERATOR' && userData.assignedPlantId) {
+      setOperatorPlantAssignment(userData.username, userData.assignedPlantId);
+    }
+    return res;
   };
 
   const logout = () => {
@@ -156,14 +198,14 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const switchDemoUser = async (roleOrUsername) => {
+  const switchDemoUser = async (roleOrUsername, assignedPlantOverride = null) => {
     const found = SEED_USERS.find(
       u => u.role.toLowerCase() === roleOrUsername.toLowerCase() ||
         u.username.toLowerCase() === roleOrUsername.toLowerCase()
     ) || SEED_USERS[0];
 
     try {
-      return await login(found.username, found.password);
+      return await login(found.username, found.password, assignedPlantOverride);
     } catch (e) {
       console.warn('Switch persona error:', e);
       throw e;
@@ -192,6 +234,9 @@ export function AuthProvider({ children }) {
         logout,
         switchDemoUser,
         hasRole,
+        assignedPlantId,
+        getOperatorPlantId,
+        setOperatorPlantAssignment,
         seedUsers: SEED_USERS
       }}
     >

@@ -17,8 +17,9 @@ import { plantsApi, machinesApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 export default function PlantsView() {
-  const { hasRole, user } = useAuth();
+  const { hasRole, user, assignedPlantId } = useAuth();
   const isAdmin = hasRole('ADMIN') || user?.role === 'ADMIN';
+  const isOperator = (user?.role || '').toUpperCase() === 'OPERATOR';
 
   const [plants, setPlants] = useState([]);
   const [machines, setMachines] = useState([]);
@@ -235,7 +236,12 @@ export default function PlantsView() {
     }
   };
 
-  const filteredPlants = plants.filter(p => {
+  const operatorPlantMatch = plants.filter(p => Number(p.id) === Number(assignedPlantId));
+  const visiblePlants = isOperator
+    ? (operatorPlantMatch.length > 0 ? operatorPlantMatch : plants.slice(0, 1))
+    : plants;
+
+  const filteredPlants = visiblePlants.filter(p => {
     const query = (searchTerm || '').trim().toLowerCase();
     const facCode = `fac-${String(p.id).padStart(3, '0')}`.toLowerCase();
     const name = (p.name || '').toLowerCase();
@@ -386,17 +392,19 @@ export default function PlantsView() {
           <table className="pbi-matrix-table" style={{ width: '100%', tableLayout: 'auto' }}>
             <thead>
               <tr>
-                <th style={{ width: '85px', padding: '12px 14px' }}>Facility ID</th>
-                <th style={{ padding: '12px 14px' }}>Facility &amp; Location</th>
-                <th style={{ padding: '12px 14px', minWidth: '180px' }}>Machine Fleet &amp; Utilization</th>
-                <th style={{ width: '110px', padding: '12px 14px' }}>Operational Status</th>
-                <th style={{ textAlign: 'right', padding: '12px 14px', whiteSpace: 'nowrap' }}>Actions</th>
+                <th style={{ width: '76px', padding: '10px 8px' }}>Facility ID</th>
+                <th style={{ padding: '10px 10px' }}>Facility &amp; Location</th>
+                <th style={{ padding: '10px 10px', width: '180px' }}>Fleet Utilization</th>
+                <th style={{ width: '100px', padding: '10px 8px', textAlign: isAdmin ? 'left' : 'right' }}>Status</th>
+                {isAdmin && (
+                  <th style={{ width: '215px', textAlign: 'right', padding: '10px 14px', whiteSpace: 'nowrap' }}>Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
               {filteredPlants.length === 0 && (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
+                  <td colSpan={isAdmin ? 5 : 4} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
                     No manufacturing facilities found matching the current search/filter.
                   </td>
                 </tr>
@@ -410,16 +418,16 @@ export default function PlantsView() {
                 return (
                   <tr key={plant.id}>
                     {/* Column 1: ID */}
-                    <td style={{ padding: '14px', fontFamily: 'var(--pbi-font-mono)', color: '#94A3B8', fontWeight: 600 }}>
+                    <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#94A3B8', fontWeight: 600, fontSize: '11.5px', whiteSpace: 'nowrap' }}>
                       FAC-{String(plant.id).padStart(3, '0')}
                     </td>
 
                     {/* Column 2: Facility & Location */}
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <td style={{ padding: '10px 10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{
-                          width: '32px',
-                          height: '32px',
+                          width: '28px',
+                          height: '28px',
                           borderRadius: '6px',
                           background: isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
                           border: `1px solid ${isOnline ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
@@ -429,14 +437,14 @@ export default function PlantsView() {
                           color: isOnline ? '#10B981' : '#EF4444',
                           flexShrink: 0
                         }}>
-                          <Building2 size={16} />
+                          <Building2 size={14} />
                         </div>
-                        <div>
-                          <div style={{ fontWeight: 700, fontSize: '13.5px', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, fontSize: '13px', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
                             {plant.name}
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11.5px', color: '#94A3B8', marginTop: '3px' }}>
-                            <MapPin size={11} color="#00BCF2" />
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+                            <MapPin size={10} color="#00BCF2" />
                             <span>{plant.location}</span>
                           </div>
                         </div>
@@ -444,18 +452,18 @@ export default function PlantsView() {
                     </td>
 
                     {/* Column 3: Machine Fleet & Utilization Bar */}
-                    <td style={{ padding: '14px' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxWidth: '240px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px' }}>
+                    <td style={{ padding: '10px 10px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', maxWidth: '170px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11px' }}>
                           <span style={{ color: '#E2E8F0' }}>
-                            <strong style={{ color: '#FFFFFF' }}>{assigned.length}</strong> machines
-                            <span style={{ color: '#94A3B8', marginLeft: '5px' }}>({running} active)</span>
+                            <strong style={{ color: '#FFFFFF' }}>{assigned.length}</strong> mach
+                            <span style={{ color: '#94A3B8', marginLeft: '4px' }}>({running} run)</span>
                           </span>
-                          <span style={{ fontWeight: 700, fontSize: '11px', color: isOnline ? '#10B981' : '#64748B' }}>
+                          <span style={{ fontWeight: 700, fontSize: '10.5px', color: isOnline ? '#10B981' : '#64748B' }}>
                             {utilPct}%
                           </span>
                         </div>
-                        <div className="pbi-cell-bar-track" style={{ height: '6px', background: '#0E1422', borderRadius: '3px' }}>
+                        <div className="pbi-cell-bar-track" style={{ height: '5px', background: '#0E1422', borderRadius: '3px' }}>
                           <div
                             className="pbi-cell-bar-fill"
                             style={{
@@ -469,56 +477,52 @@ export default function PlantsView() {
                     </td>
 
                     {/* Column 4: Operational Status */}
-                    <td style={{ padding: '14px' }}>
+                    <td style={{ padding: isAdmin ? '10px 8px' : '10px 14px', whiteSpace: 'nowrap', textAlign: isAdmin ? 'left' : 'right' }}>
                       <span className={`pbi-status-pill ${isOnline ? 'pbi-status-online' : 'pbi-status-offline'}`}>
                         <span className="pbi-status-dot" />
                         <span>{isOnline ? 'ONLINE' : 'OFFLINE'}</span>
                       </span>
                     </td>
 
-                    {/* Column 5: Authorizations & Actions - STRICTLY ONE LINE */}
-                    <td style={{ padding: '14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', flexWrap: 'nowrap' }}>
-                        {/* Status Toggle Button - Make Offline / Make Online */}
-                        <button
-                          type="button"
-                          className={`pbi-btn-action-sm ${isOnline ? 'pbi-btn-toggle-offline' : 'pbi-btn-toggle-online'}`}
-                          disabled={!isAdmin}
-                          onClick={() => handleToggleStatus(plant)}
-                          title={isOnline ? 'Make facility offline' : 'Make facility online'}
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <Power size={11} />
-                          <span>{isOnline ? 'Make Offline' : 'Make Online'}</span>
-                        </button>
+                    {/* Column 5: Authorizations & Actions - Admin Only */}
+                    {isAdmin && (
+                      <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px', flexWrap: 'nowrap' }}>
+                          {/* Status Toggle Button - Make Offline / Make Online */}
+                          <button
+                            type="button"
+                            className={`pbi-btn-action-sm ${isOnline ? 'pbi-btn-toggle-offline' : 'pbi-btn-toggle-online'}`}
+                            onClick={() => handleToggleStatus(plant)}
+                            title={isOnline ? 'Make facility offline' : 'Make facility online'}
+                          >
+                            <Power size={11} />
+                            <span>{isOnline ? 'Make Offline' : 'Make Online'}</span>
+                          </button>
 
-                        {/* Edit Button */}
-                        <button
-                          type="button"
-                          className="pbi-btn-action-sm pbi-btn-action-primary"
-                          disabled={!isAdmin}
-                          onClick={() => handleOpenEdit(plant)}
-                          title="Edit facility parameters"
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <Pencil size={11} />
-                          <span>Edit</span>
-                        </button>
+                          {/* Edit Button */}
+                          <button
+                            type="button"
+                            className="pbi-btn-action-sm pbi-btn-action-primary"
+                            onClick={() => handleOpenEdit(plant)}
+                            title="Edit facility parameters"
+                          >
+                            <Pencil size={11} />
+                            <span>Edit</span>
+                          </button>
 
-                        {/* Delete Button */}
-                        <button
-                          type="button"
-                          className="pbi-btn-action-sm pbi-btn-action-danger"
-                          disabled={!isAdmin}
-                          onClick={() => handleDelete(plant)}
-                          title="Delete facility (Admin authorization required)"
-                          style={{ whiteSpace: 'nowrap' }}
-                        >
-                          <Trash2 size={11} />
-                          <span>Delete</span>
-                        </button>
-                      </div>
-                    </td>
+                          {/* Delete Button */}
+                          <button
+                            type="button"
+                            className="pbi-btn-action-sm pbi-btn-action-danger"
+                            onClick={() => handleDelete(plant)}
+                            title="Delete facility (Admin authorization required)"
+                          >
+                            <Trash2 size={11} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}

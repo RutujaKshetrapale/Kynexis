@@ -4,24 +4,20 @@ import {
   Building2,
   Cpu,
   Users,
-  Network,
   AlertTriangle,
   Plus,
   Trash2,
-  RefreshCw,
   CheckCircle2,
   XCircle,
   Lock,
   Unlock,
-  ExternalLink,
-  ChevronRight,
-  Server,
   Zap,
-  Activity,
-  Layers,
-  Sparkles,
-  UserCheck,
-  AlertOctagon
+  AlertOctagon,
+  Gauge,
+  Wrench,
+  Power,
+  Calendar,
+  User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -29,25 +25,45 @@ import {
   machinesApi,
   authApi,
   alertsApi,
-  useBackendStatus
+  sensorsApi,
+  maintenanceApi
 } from '../services/api';
 
-const MICROSERVICES_CONFIG = [
-  { name: 'API Gateway', port: 8080, route: '/api/*', protocol: 'HTTP/REST', desc: 'Central routing & JWT filter gateway' },
-  { name: 'Auth Service', port: 8081, route: '/api/auth/*', protocol: 'Spring Security + JWT', desc: 'Authentication & RBAC governance' },
-  { name: 'Plant Service', port: 8082, route: '/api/plants/*', protocol: 'Spring Data JPA / MySQL', desc: 'Facility topology & metadata' },
-  { name: 'Telemetry Service', port: 8083, route: '/api/telemetry/*', protocol: 'High-Frequency Stream', desc: 'Machine telemetry time-series' },
-  { name: 'Alert Service', port: 8084, route: '/api/alerts/*', protocol: 'Event Evaluation', desc: 'Anomaly detection & escalation' },
-  { name: 'Maintenance Service', port: 8085, route: '/api/maintenance/*', protocol: 'Work Order Flow', desc: 'Predictive health & work orders' },
-  { name: 'Production Service', port: 8086, route: '/api/production/*', protocol: 'Batch Processing', desc: 'Work order batches & scrap rate' },
-  { name: 'Energy Service', port: 8087, route: '/api/energy/*', protocol: 'Continuous Metering', desc: 'Power demand & tariff curve' },
-  { name: 'Machine Service', port: 8088, route: '/api/machines/*', protocol: 'Asset Lifecycle', desc: 'Fleet assets & status tracking' },
-  { name: 'Sensor Service', port: 8089, route: '/api/sensors/*', protocol: 'Calibration Matrix', desc: 'Sensor threshold calibration' }
+const SENSOR_TYPES = [
+  { type: 'TEMPERATURE', unit: '°C' },
+  { type: 'VIBRATION', unit: 'mm/s' },
+  { type: 'PRESSURE', unit: 'bar' },
+  { type: 'RPM', unit: 'RPM' },
+  { type: 'POWER', unit: 'kW' }
 ];
 
+const MAINT_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'PREDICTIVE', 'CALIBRATION', 'INSPECTION'];
+const MAINT_STATUSES = ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+
+function getTodayDateString() {
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toDateString(val) {
+  if (!val) return '';
+  if (/^\d{4}-\d{2}-\d{2}/.test(val)) return val.slice(0, 10);
+  const d = new Date(val);
+  if (Number.isNaN(d.getTime())) return getTodayDateString();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function ensureFutureOrPresentDate(dateStr) {
+  const today = getTodayDateString();
+  const normalized = toDateString(dateStr);
+  if (!normalized || normalized < today) return today;
+  return normalized;
+}
+
 export default function AdminView() {
-  const { user, hasRole, switchDemoUser } = useAuth();
-  const { isLive } = useBackendStatus();
+  const { user, hasRole, switchDemoUser, getOperatorPlantId, setOperatorPlantAssignment } = useAuth();
 
   const isAdmin = hasRole('ADMIN') || user?.role === 'ADMIN';
 
@@ -58,6 +74,8 @@ export default function AdminView() {
   const [plants, setPlants] = useState([]);
   const [machines, setMachines] = useState([]);
   const [users, setUsers] = useState([]);
+  const [sensors, setSensors] = useState([]);
+  const [maintenanceOrders, setMaintenanceOrders] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState(null);
@@ -70,7 +88,20 @@ export default function AdminView() {
   const [newMachine, setNewMachine] = useState({ name: '', type: 'CNC', plantId: '1', status: 'RUNNING' });
 
   const [showUserModal, setShowUserModal] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', email: '', password: 'User@123', role: 'OPERATOR' });
+  const [newUser, setNewUser] = useState({ username: '', email: '', password: 'User@123', role: 'OPERATOR', assignedPlantId: '1' });
+
+  const [showSensorModal, setShowSensorModal] = useState(false);
+  const [newSensor, setNewSensor] = useState({ name: '', type: 'TEMPERATURE', unit: '°C', machineId: '1', active: true });
+
+  const [showMaintenanceModal, setShowMaintenanceModal] = useState(false);
+  const [newOrder, setNewOrder] = useState({
+    machineId: '1',
+    type: 'PREVENTIVE',
+    description: '',
+    scheduledDate: getTodayDateString(),
+    status: 'SCHEDULED',
+    technician: 'Lead Systems Engineer'
+  });
 
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -84,17 +115,27 @@ export default function AdminView() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [plantsData, machinesData, usersData, alertsData] = await Promise.all([
+      const [plantsData, machinesData, usersData, sensorsData, maintData, alertsData] = await Promise.all([
         plantsApi.getAll().catch(() => []),
         machinesApi.getAll().catch(() => []),
         authApi.getUsers().catch(() => []),
+        sensorsApi.getAll().catch(() => []),
+        maintenanceApi.getAll().catch(() => []),
         alertsApi.getAll().catch(() => [])
       ]);
 
+      const machList = Array.isArray(machinesData) ? machinesData : (machinesData?.content || []);
       setPlants(Array.isArray(plantsData) ? plantsData : (plantsData?.content || []));
-      setMachines(Array.isArray(machinesData) ? machinesData : (machinesData?.content || []));
+      setMachines(machList);
       setUsers(Array.isArray(usersData) ? usersData : (usersData?.content || []));
+      setSensors(Array.isArray(sensorsData) ? sensorsData : (sensorsData?.content || []));
+      setMaintenanceOrders(Array.isArray(maintData) ? maintData : (maintData?.content || []));
       setAlerts(Array.isArray(alertsData) ? alertsData : (alertsData?.content || []));
+
+      if (machList.length > 0) {
+        setNewSensor(prev => prev.machineId === '1' ? { ...prev, machineId: String(machList[0].id) } : prev);
+        setNewOrder(prev => prev.machineId === '1' ? { ...prev, machineId: String(machList[0].id) } : prev);
+      }
     } catch (err) {
       console.error('Failed to load admin data:', err);
       showToast('Error syncing with backend gateway (:8080)', 'error');
@@ -243,9 +284,12 @@ export default function AdminView() {
         password: newUser.password,
         role: newUser.role
       });
+      if (newUser.role === 'OPERATOR') {
+        setOperatorPlantAssignment(newUser.username.trim(), Number(newUser.assignedPlantId) || 1);
+      }
       showToast(`User '${newUser.username}' registered with role ${newUser.role}`);
       setShowUserModal(false);
-      setNewUser({ username: '', email: '', password: 'User@123', role: 'OPERATOR' });
+      setNewUser({ username: '', email: '', password: 'User@123', role: 'OPERATOR', assignedPlantId: String(plants[0]?.id || '1') });
       fetchData();
     } catch (err) {
       showToast(err.message || 'Failed to register user', 'error');
@@ -285,6 +329,180 @@ export default function AdminView() {
     }
   };
 
+  // 5. Sensor Actions
+  const handleCreateSensor = async (e) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      showToast('Access Denied: Only ROLE_ADMIN can provision sensors', 'error');
+      return;
+    }
+    if (!newSensor.name.trim()) {
+      showToast('Sensor Label is required', 'error');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await sensorsApi.create({
+        name: newSensor.name.trim(),
+        type: newSensor.type,
+        unit: newSensor.unit || '°C',
+        machineId: Number(newSensor.machineId) || 1,
+        active: newSensor.active
+      });
+      showToast(`Sensor '${newSensor.name}' provisioned successfully`);
+      setShowSensorModal(false);
+      setNewSensor({
+        name: '',
+        type: 'TEMPERATURE',
+        unit: '°C',
+        machineId: machines.length > 0 ? String(machines[0].id) : '1',
+        active: true
+      });
+      fetchData();
+    } catch (err) {
+      showToast(err.message || 'Failed to provision sensor', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleSensorStatus = async (sensor) => {
+    if (!isAdmin) {
+      showToast('Access Denied: Only ROLE_ADMIN can modify sensor calibration state', 'error');
+      return;
+    }
+    const nextActive = !(sensor.active !== false);
+    setSensors(prev => prev.map(s => (s.id === sensor.id ? { ...s, active: nextActive } : s)));
+    try {
+      await sensorsApi.update(sensor.id, {
+        name: sensor.name || `${sensor.type} Sensor #${sensor.id}`,
+        type: sensor.type || 'TEMPERATURE',
+        unit: sensor.unit || '°C',
+        machineId: Number(sensor.machineId || sensor.machine?.id || 1),
+        active: nextActive
+      });
+      showToast(`Sensor '${sensor.name || sensor.id}' marked ${nextActive ? 'CALIBRATED' : 'STANDBY'}`);
+      fetchData();
+    } catch (err) {
+      showToast(err.message || 'Failed to update sensor status', 'error');
+      fetchData();
+    }
+  };
+
+  const handleDeleteSensor = async (sensorId, sensorName) => {
+    if (!isAdmin) {
+      showToast('Access Denied: Only ROLE_ADMIN can decommission sensors', 'error');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete sensor '${sensorName}'?`)) {
+      return;
+    }
+    try {
+      await sensorsApi.delete(sensorId);
+      showToast(`Sensor '${sensorName}' decommissioned`);
+      fetchData();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete sensor', 'error');
+    }
+  };
+
+  // 6. Maintenance Actions
+  const handleCreateOrder = async (e) => {
+    e.preventDefault();
+    if (!isAdmin) {
+      showToast('Access Denied: Only ROLE_ADMIN can create work orders', 'error');
+      return;
+    }
+    if (!newOrder.description.trim() || newOrder.description.trim().length < 5) {
+      showToast('Description must be at least 5 characters', 'error');
+      return;
+    }
+    if (!newOrder.technician.trim() || newOrder.technician.trim().length < 2) {
+      showToast('Technician name is required', 'error');
+      return;
+    }
+
+    const schedDate = ensureFutureOrPresentDate(newOrder.scheduledDate);
+    setActionLoading(true);
+    try {
+      await maintenanceApi.create({
+        machineId: Number(newOrder.machineId) || 1,
+        type: newOrder.type,
+        description: newOrder.description.trim(),
+        scheduledDate: schedDate,
+        completedDate: newOrder.status === 'COMPLETED' ? schedDate : null,
+        status: newOrder.status,
+        technician: newOrder.technician.trim()
+      });
+      showToast(`Maintenance work order (${newOrder.type}) created`);
+      setShowMaintenanceModal(false);
+      setNewOrder({
+        machineId: machines.length > 0 ? String(machines[0].id) : '1',
+        type: 'PREVENTIVE',
+        description: '',
+        scheduledDate: getTodayDateString(),
+        status: 'SCHEDULED',
+        technician: 'Lead Systems Engineer'
+      });
+      fetchData();
+    } catch (err) {
+      showToast(err.message || 'Failed to create work order', 'error');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleToggleOrderStatus = async (order) => {
+    if (!isAdmin) {
+      showToast('Access Denied: Only ROLE_ADMIN can update work order status', 'error');
+      return;
+    }
+    const isComplete = (order.status || '').toUpperCase() === 'COMPLETED';
+    const nextStatus = isComplete ? 'IN_PROGRESS' : 'COMPLETED';
+    const schedDate = ensureFutureOrPresentDate(order.scheduledDate);
+    const today = getTodayDateString();
+    const nextCompDate = nextStatus === 'COMPLETED' ? (today >= schedDate ? today : schedDate) : null;
+    const desc = (order.description || order.task || 'Preventive maintenance check').trim();
+    const safeDesc = desc.length >= 5 ? desc : `${desc} check`;
+    const tech = (order.technician || order.assignedTo || 'Lead Systems Engineer').trim();
+
+    setMaintenanceOrders(prev => prev.map(o => (o.id === order.id ? { ...o, status: nextStatus, completedDate: nextCompDate } : o)));
+    try {
+      await maintenanceApi.update(order.id, {
+        machineId: Number(order.machineId || order.machine?.id || 1),
+        type: (order.type || 'PREVENTIVE').toUpperCase(),
+        description: safeDesc,
+        scheduledDate: schedDate,
+        completedDate: nextCompDate,
+        status: nextStatus,
+        technician: tech.length >= 2 ? tech : 'Lead Systems Engineer'
+      });
+      showToast(`Work order WO-${String(order.id).padStart(3, '0')} marked ${nextStatus}`);
+      fetchData();
+    } catch (err) {
+      showToast(err.message || 'Failed to update work order', 'error');
+      fetchData();
+    }
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    if (!isAdmin) {
+      showToast('Access Denied: Only ROLE_ADMIN can delete work orders', 'error');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to delete work order WO-${String(orderId).padStart(3, '0')}?`)) {
+      return;
+    }
+    try {
+      await maintenanceApi.delete(orderId);
+      showToast(`Work order WO-${String(orderId).padStart(3, '0')} deleted`);
+      fetchData();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete work order', 'error');
+    }
+  };
+
   return (
     <div className="pbi-admin-container">
       {/* Toast Notification */}
@@ -306,7 +524,7 @@ export default function AdminView() {
               Administration Console
             </div>
             <div className="pbi-admin-top-desc">
-              Central topology management, role-based authorization, node provisioning &amp; mesh health
+              Central topology management, role-based authorization, sensors &amp; maintenance governance
             </div>
           </div>
         </div>
@@ -384,11 +602,20 @@ export default function AdminView() {
 
         <button
           type="button"
-          className={`pbi-admin-tab-btn ${activeTab === 'mesh' ? 'active' : ''}`}
-          onClick={() => setActiveTab('mesh')}
+          className={`pbi-admin-tab-btn ${activeTab === 'sensors' ? 'active' : ''}`}
+          onClick={() => setActiveTab('sensors')}
         >
-          <Server size={15} />
-          <span>Mesh Nodes (10)</span>
+          <Gauge size={15} />
+          <span>Sensors ({sensors.length})</span>
+        </button>
+
+        <button
+          type="button"
+          className={`pbi-admin-tab-btn ${activeTab === 'maintenance' ? 'active' : ''}`}
+          onClick={() => setActiveTab('maintenance')}
+        >
+          <Wrench size={15} />
+          <span>Maintenance ({maintenanceOrders.length})</span>
         </button>
 
         <button
@@ -631,18 +858,19 @@ export default function AdminView() {
             <table className="pbi-matrix-table">
               <thead>
                 <tr>
-                  <th style={{ width: '80px' }}>User ID</th>
+                  <th style={{ width: '76px' }}>User ID</th>
                   <th>Username</th>
                   <th>Enterprise Email</th>
                   <th>Current Role</th>
                   <th>Change Role (RBAC)</th>
-                  <th style={{ textAlign: 'right' }}>Account Status</th>
+                  <th>Assigned Plant</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((u) => {
                   const roleUpper = (u.role || 'OPERATOR').toUpperCase();
                   const roleColor = roleUpper === 'ADMIN' ? '#F2C811' : (roleUpper === 'MANAGER' ? '#A855F7' : (roleUpper === 'ENGINEER' ? '#00BCF2' : '#10B981'));
+                  const assignedPid = getOperatorPlantId(u.username);
 
                   return (
                     <tr key={u.id}>
@@ -691,11 +919,39 @@ export default function AdminView() {
                           <option value="OPERATOR">OPERATOR</option>
                         </select>
                       </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <span className="pbi-status-pill pbi-status-running">
-                          <span className="pbi-status-dot" />
-                          <span>Active Session</span>
-                        </span>
+                      <td>
+                        {roleUpper === 'OPERATOR' ? (
+                          <select
+                            aria-label={`Assigned plant for operator ${u.username}`}
+                            value={String(assignedPid)}
+                            disabled={!isAdmin}
+                            onChange={(e) => {
+                              const pid = Number(e.target.value);
+                              setOperatorPlantAssignment(u.username, pid);
+                              const pName = plants.find(p => p.id === pid)?.name || `Plant #${pid}`;
+                              showToast(`Operator @${u.username} assigned to ${pName}`);
+                            }}
+                            style={{
+                              background: 'rgba(16, 185, 129, 0.1)',
+                              border: '1px solid rgba(16, 185, 129, 0.4)',
+                              color: '#6EE7B7',
+                              borderRadius: '4px',
+                              padding: '3px 8px',
+                              fontSize: '11.5px',
+                              fontWeight: 600,
+                              cursor: isAdmin ? 'pointer' : 'not-allowed',
+                              fontFamily: 'inherit'
+                            }}
+                          >
+                            {plants.map(p => (
+                              <option key={p.id} value={String(p.id)} style={{ background: '#111724', color: '#FFFFFF' }}>
+                                {p.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span style={{ color: '#64748B', fontSize: '11.5px' }}>All Facilities</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -707,61 +963,246 @@ export default function AdminView() {
       )}
 
       {/* ============================================================== */}
-      {/* DOMAIN 4: MICROSERVICES MESH */}
+      {/* DOMAIN 4: SENSORS */}
       {/* ============================================================== */}
-      {activeTab === 'mesh' && (
-        <div>
-          <div style={{
-            background: 'var(--pbi-visual-bg)',
-            border: '1px solid var(--pbi-border)',
-            borderRadius: '8px',
-            padding: '16px 20px',
-            marginBottom: '16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
+      {activeTab === 'sensors' && (
+        <div className="pbi-visual-card">
+          <div className="pbi-visual-header">
             <div>
-              <div style={{ fontSize: '14px', fontWeight: 800, color: '#FFFFFF' }}>
-                Spring Cloud &amp; Microservices Architecture (10 Nodes)
-              </div>
-              <div style={{ fontSize: '11.5px', color: '#94A3B8' }}>
-                Every domain operates as an autonomous Spring Boot service wired via API Gateway (:8080)
-              </div>
+              <div className="pbi-visual-title">IoT Transducer Sensors &amp; Calibration</div>
             </div>
 
-            <div className="pbi-admin-auth-tag pbi-admin-auth-granted">
-              <span>All 10 Microservices Online</span>
+            <div className="pbi-visual-actions">
+              <button
+                type="button"
+                className="pbi-btn-action-sm pbi-btn-action-gold"
+                disabled={!isAdmin}
+                onClick={() => setShowSensorModal(true)}
+                title={isAdmin ? 'Provision new IoT sensor' : 'Admin authorization required'}
+              >
+                <Plus size={14} />
+                <span>Provision Sensor</span>
+              </button>
             </div>
           </div>
 
-          <div className="pbi-mesh-grid">
-            {MICROSERVICES_CONFIG.map((srv, idx) => (
-              <div key={idx} className="pbi-mesh-card">
-                <div className="pbi-mesh-card-header">
-                  <span className="pbi-mesh-card-name">{srv.name}</span>
-                  <span className="pbi-mesh-card-port">:{srv.port}</span>
-                </div>
-                <div className="pbi-mesh-card-route">{srv.route}</div>
-                <div style={{ fontSize: '11px', color: '#94A3B8', marginBottom: '10px', flex: 1 }}>
-                  {srv.desc}
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  paddingTop: '8px',
-                  borderTop: '1px solid rgba(255,255,255,0.06)',
-                  fontSize: '10.5px'
-                }}>
-                  <span style={{ color: '#10B981', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
-                    Healthy
-                  </span>
-                  <span style={{ color: '#64748B', fontFamily: 'var(--pbi-font-mono)' }}>HTTP 200</span>
-                </div>
-              </div>
-            ))}
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="pbi-matrix-table" style={{ width: '100%', tableLayout: 'auto' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '76px', padding: '10px 8px' }}>Sensor ID</th>
+                  <th style={{ padding: '10px 10px' }}>Sensor &amp; Modality</th>
+                  <th style={{ padding: '10px 10px' }}>Bound Machine</th>
+                  <th style={{ width: '68px', padding: '10px 8px', textAlign: 'center' }}>Unit</th>
+                  <th style={{ width: '108px', padding: '10px 8px' }}>Status</th>
+                  <th style={{ width: '170px', textAlign: 'right', padding: '10px 14px', whiteSpace: 'nowrap' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sensors.length === 0 && (
+                  <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '32px', color: '#94A3B8' }}>
+                      No sensors provisioned.
+                    </td>
+                  </tr>
+                )}
+                {sensors.map((s) => {
+                  const assignedMach = machines.find(m => m.id === Number(s.machineId || s.machine?.id));
+                  const isActive = s.active !== false;
+
+                  return (
+                    <tr key={s.id}>
+                      <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#F59E0B', fontWeight: 700, fontSize: '11.5px', whiteSpace: 'nowrap' }}>
+                        SEN-{String(s.id).padStart(3, '0')}
+                      </td>
+                      <td style={{ padding: '10px 10px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#FFFFFF' }}>
+                          {s.name || `${s.type} Sensor #${s.id}`}
+                        </div>
+                        <span style={{
+                          fontFamily: 'var(--pbi-font-mono)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          color: '#F59E0B',
+                          background: 'rgba(245, 158, 11, 0.12)',
+                          border: '1px solid rgba(245, 158, 11, 0.3)',
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          display: 'inline-block',
+                          marginTop: '2px'
+                        }}>
+                          {s.type}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 10px', color: '#CBD5E1', fontSize: '12.5px' }}>
+                        {assignedMach ? assignedMach.name : `Machine #${s.machineId || 1}`}
+                      </td>
+                      <td style={{ padding: '10px 8px', textAlign: 'center', fontFamily: 'var(--pbi-font-mono)', color: '#38BDF8', fontWeight: 700, fontSize: '11.5px' }}>
+                        {s.unit || '°C'}
+                      </td>
+                      <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
+                        <span className={`pbi-status-pill ${isActive ? 'pbi-status-online' : 'pbi-status-offline'}`}>
+                          <span className="pbi-status-dot" />
+                          <span>{isActive ? 'CALIBRATED' : 'STANDBY'}</span>
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                          <button
+                            type="button"
+                            className={`pbi-btn-action-sm ${isActive ? 'pbi-btn-toggle-offline' : 'pbi-btn-toggle-online'}`}
+                            disabled={!isAdmin}
+                            onClick={() => handleToggleSensorStatus(s)}
+                          >
+                            <Power size={11} />
+                            <span>{isActive ? 'Standby' : 'Calibrate'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="pbi-btn-action-sm pbi-btn-action-danger"
+                            disabled={!isAdmin}
+                            onClick={() => handleDeleteSensor(s.id, s.name || `SEN-${s.id}`)}
+                          >
+                            <Trash2 size={11} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* DOMAIN 5: MAINTENANCE */}
+      {/* ============================================================== */}
+      {activeTab === 'maintenance' && (
+        <div className="pbi-visual-card">
+          <div className="pbi-visual-header">
+            <div>
+              <div className="pbi-visual-title">Maintenance Work Orders &amp; Dispatch</div>
+            </div>
+
+            <div className="pbi-visual-actions">
+              <button
+                type="button"
+                className="pbi-btn-action-sm pbi-btn-action-gold"
+                disabled={!isAdmin}
+                onClick={() => {
+                  setNewOrder(prev => ({ ...prev, scheduledDate: getTodayDateString() }));
+                  setShowMaintenanceModal(true);
+                }}
+                title={isAdmin ? 'Schedule new maintenance work order' : 'Admin authorization required'}
+              >
+                <Plus size={14} />
+                <span>Create Order</span>
+              </button>
+            </div>
+          </div>
+
+          <div style={{ overflowX: 'auto', width: '100%' }}>
+            <table className="pbi-matrix-table" style={{ width: '100%', tableLayout: 'auto' }}>
+              <thead>
+                <tr>
+                  <th style={{ width: '74px', padding: '10px 8px' }}>Order ID</th>
+                  <th style={{ width: '165px', padding: '10px 8px' }}>Asset &amp; Type</th>
+                  <th style={{ padding: '10px 10px' }}>Description &amp; Dispatch</th>
+                  <th style={{ width: '108px', padding: '10px 8px' }}>Status</th>
+                  <th style={{ width: '165px', textAlign: 'right', padding: '10px 14px', whiteSpace: 'nowrap' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {maintenanceOrders.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'center', padding: '32px', color: '#94A3B8' }}>
+                      No maintenance work orders scheduled.
+                    </td>
+                  </tr>
+                )}
+                {maintenanceOrders.map((o) => {
+                  const statusUpper = (o.status || 'SCHEDULED').toUpperCase();
+                  const isComplete = statusUpper === 'COMPLETED';
+                  const machId = Number(o.machineId || o.machine?.id || 1);
+                  const assignedMach = machines.find(m => m.id === machId);
+                  const maintType = (o.type || 'PREVENTIVE').toUpperCase();
+                  const typeColor = maintType === 'CORRECTIVE' ? '#EF4444' : (maintType === 'PREDICTIVE' ? '#F59E0B' : '#00BCF2');
+
+                  return (
+                    <tr key={o.id}>
+                      <td style={{ padding: '10px 8px', fontFamily: 'var(--pbi-font-mono)', color: '#EC4899', fontWeight: 700, fontSize: '11.5px', whiteSpace: 'nowrap' }}>
+                        WO-{String(o.id).padStart(3, '0')}
+                      </td>
+                      <td style={{ padding: '10px 8px' }}>
+                        <div style={{ fontWeight: 700, fontSize: '12.5px', color: '#FFFFFF' }}>
+                          {assignedMach ? assignedMach.name : `Machine #${machId}`}
+                        </div>
+                        <span style={{
+                          color: typeColor,
+                          background: `${typeColor}15`,
+                          border: `1px solid ${typeColor}40`,
+                          padding: '1px 5px',
+                          borderRadius: '3px',
+                          fontFamily: 'var(--pbi-font-mono)',
+                          fontSize: '10px',
+                          fontWeight: 700,
+                          display: 'inline-block',
+                          marginTop: '2px'
+                        }}>
+                          {maintType}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 10px' }}>
+                        <div style={{ color: '#E2E8F0', fontSize: '12.5px', lineHeight: 1.35 }}>
+                          {o.description || o.task || 'Preventive maintenance check'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '3px', fontSize: '11px', color: '#94A3B8' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <User size={11} color="#EC4899" />
+                            <span>{o.technician || o.assignedTo || 'Lead Systems Engineer'}</span>
+                          </span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontFamily: 'var(--pbi-font-mono)', fontSize: '10.5px', color: '#64748B' }}>
+                            <Calendar size={11} />
+                            <span>{o.scheduledDate ? toDateString(o.scheduledDate) : 'Immediate'}</span>
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '10px 8px', whiteSpace: 'nowrap' }}>
+                        <span className={`pbi-status-pill ${isComplete ? 'pbi-status-running' : (statusUpper === 'IN_PROGRESS' ? 'pbi-status-idle' : 'pbi-status-maintenance')}`}>
+                          <span className="pbi-status-dot" />
+                          <span>{statusUpper}</span>
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 14px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                          <button
+                            type="button"
+                            className={`pbi-btn-action-sm ${isComplete ? 'pbi-btn-toggle-offline' : 'pbi-btn-toggle-online'}`}
+                            disabled={!isAdmin}
+                            onClick={() => handleToggleOrderStatus(o)}
+                          >
+                            {isComplete ? <Power size={11} /> : <CheckCircle2 size={11} />}
+                            <span>{isComplete ? 'Reopen' : 'Done'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="pbi-btn-action-sm pbi-btn-action-danger"
+                            disabled={!isAdmin}
+                            onClick={() => handleDeleteOrder(o.id)}
+                          >
+                            <Trash2 size={11} />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -1120,6 +1561,24 @@ export default function AdminView() {
                     <option value="ADMIN">ADMIN (System Administrator)</option>
                   </select>
                 </div>
+
+                {newUser.role === 'OPERATOR' && (
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="reg-assigned-plant">Assigned Manufacturing Plant</label>
+                    <select
+                      id="reg-assigned-plant"
+                      className="pbi-form-input"
+                      value={newUser.assignedPlantId}
+                      onChange={(e) => setNewUser({ ...newUser, assignedPlantId: e.target.value })}
+                    >
+                      {plants.map(p => (
+                        <option key={p.id} value={String(p.id)}>
+                          {p.name} ({p.location})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
 
               <div className="pbi-modal-footer">
@@ -1137,6 +1596,229 @@ export default function AdminView() {
                   disabled={actionLoading}
                 >
                   {actionLoading ? 'Registering...' : 'Register User'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 4: PROVISION NEW SENSOR */}
+      {/* ============================================================== */}
+      {showSensorModal && (
+        <div className="pbi-modal-backdrop" onClick={() => setShowSensorModal(false)}>
+          <div className="pbi-modal-window" onClick={(e) => e.stopPropagation()}>
+            <div className="pbi-modal-header">
+              <div className="pbi-modal-title">
+                <Gauge size={16} color="#F59E0B" />
+                <span>Provision New IoT Sensor</span>
+              </div>
+              <button type="button" className="pbi-modal-close" onClick={() => setShowSensorModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSensor}>
+              <div className="pbi-modal-body">
+                <div className="pbi-form-group">
+                  <label className="pbi-form-label" htmlFor="admin-sensor-name">Sensor Label</label>
+                  <input
+                    id="admin-sensor-name"
+                    type="text"
+                    className="pbi-form-input"
+                    placeholder="e.g. Spindle Thermal Probe #12"
+                    value={newSensor.name}
+                    onChange={(e) => setNewSensor({ ...newSensor, name: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="admin-sensor-type">Modality</label>
+                    <select
+                      id="admin-sensor-type"
+                      className="pbi-form-input"
+                      value={newSensor.type}
+                      onChange={(e) => {
+                        const found = SENSOR_TYPES.find(t => t.type === e.target.value);
+                        setNewSensor({ ...newSensor, type: e.target.value, unit: found ? found.unit : newSensor.unit });
+                      }}
+                    >
+                      {SENSOR_TYPES.map(st => (
+                        <option key={st.type} value={st.type}>{st.type}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="admin-sensor-unit">Unit</label>
+                    <input
+                      id="admin-sensor-unit"
+                      type="text"
+                      className="pbi-form-input"
+                      value={newSensor.unit}
+                      onChange={(e) => setNewSensor({ ...newSensor, unit: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="pbi-form-group">
+                  <label className="pbi-form-label" htmlFor="admin-sensor-machine">Bound Machine Asset</label>
+                  <select
+                    id="admin-sensor-machine"
+                    className="pbi-form-input"
+                    value={newSensor.machineId}
+                    onChange={(e) => setNewSensor({ ...newSensor, machineId: e.target.value })}
+                  >
+                    {machines.length === 0 && <option value="1">Machine #1</option>}
+                    {machines.map(m => (
+                      <option key={m.id} value={String(m.id)}>
+                        MCH-{String(m.id).padStart(3, '0')} — {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="pbi-modal-footer">
+                <button type="button" className="pbi-ribbon-btn" onClick={() => setShowSensorModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="pbi-btn-action-sm pbi-btn-action-gold"
+                  style={{ height: '32px', padding: '0 16px' }}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Provisioning...' : 'Provision Sensor'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 5: CREATE MAINTENANCE WORK ORDER */}
+      {/* ============================================================== */}
+      {showMaintenanceModal && (
+        <div className="pbi-modal-backdrop" onClick={() => setShowMaintenanceModal(false)}>
+          <div className="pbi-modal-window" onClick={(e) => e.stopPropagation()}>
+            <div className="pbi-modal-header">
+              <div className="pbi-modal-title">
+                <Wrench size={16} color="#EC4899" />
+                <span>Create Maintenance Work Order</span>
+              </div>
+              <button type="button" className="pbi-modal-close" onClick={() => setShowMaintenanceModal(false)}>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateOrder}>
+              <div className="pbi-modal-body">
+                <div className="pbi-form-group">
+                  <label className="pbi-form-label" htmlFor="admin-order-machine">Target Machine Asset</label>
+                  <select
+                    id="admin-order-machine"
+                    className="pbi-form-input"
+                    value={newOrder.machineId}
+                    onChange={(e) => setNewOrder({ ...newOrder, machineId: e.target.value })}
+                  >
+                    {machines.length === 0 && <option value="1">Machine #1</option>}
+                    {machines.map(m => (
+                      <option key={m.id} value={String(m.id)}>
+                        MCH-{String(m.id).padStart(3, '0')} — {m.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="admin-order-type">Type</label>
+                    <select
+                      id="admin-order-type"
+                      className="pbi-form-input"
+                      value={newOrder.type}
+                      onChange={(e) => setNewOrder({ ...newOrder, type: e.target.value })}
+                    >
+                      {MAINT_TYPES.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="admin-order-status">Status</label>
+                    <select
+                      id="admin-order-status"
+                      className="pbi-form-input"
+                      value={newOrder.status}
+                      onChange={(e) => setNewOrder({ ...newOrder, status: e.target.value })}
+                    >
+                      {MAINT_STATUSES.map(st => (
+                        <option key={st} value={st}>{st}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="admin-order-tech">Technician</label>
+                    <input
+                      id="admin-order-tech"
+                      type="text"
+                      className="pbi-form-input"
+                      value={newOrder.technician}
+                      onChange={(e) => setNewOrder({ ...newOrder, technician: e.target.value })}
+                      required
+                    />
+                  </div>
+
+                  <div className="pbi-form-group">
+                    <label className="pbi-form-label" htmlFor="admin-order-date">Scheduled Date</label>
+                    <input
+                      id="admin-order-date"
+                      type="date"
+                      min={getTodayDateString()}
+                      className="pbi-form-input"
+                      value={newOrder.scheduledDate}
+                      onChange={(e) => setNewOrder({ ...newOrder, scheduledDate: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="pbi-form-group">
+                  <label className="pbi-form-label" htmlFor="admin-order-desc">Description</label>
+                  <textarea
+                    id="admin-order-desc"
+                    rows={3}
+                    className="pbi-form-input"
+                    style={{ height: 'auto', padding: '10px 12px', resize: 'vertical' }}
+                    placeholder="e.g. Preventive spindle lubrication and bearing inspection"
+                    value={newOrder.description}
+                    onChange={(e) => setNewOrder({ ...newOrder, description: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="pbi-modal-footer">
+                <button type="button" className="pbi-ribbon-btn" onClick={() => setShowMaintenanceModal(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="pbi-btn-action-sm pbi-btn-action-gold"
+                  style={{ height: '32px', padding: '0 16px' }}
+                  disabled={actionLoading}
+                >
+                  {actionLoading ? 'Creating...' : 'Create Order'}
                 </button>
               </div>
             </form>

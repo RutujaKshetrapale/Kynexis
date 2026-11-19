@@ -1,8 +1,10 @@
 import React from 'react';
 import {
   Shield,
-  Building2,
+  BarChart3,
   Cpu,
+  HardHat,
+  Building2,
   Layers,
   Zap,
   Wrench,
@@ -11,42 +13,9 @@ import {
   Gauge,
   ChevronLeft,
   ChevronRight,
-  Menu,
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-const NAV_ITEMS = [
-  {
-    group: 'Governance',
-    items: [
-      { id: 'admin', label: 'Admin Console', icon: Shield, color: '#F2C811', roleReq: 'ADMIN' }
-    ]
-  },
-  {
-    group: 'Manufacturing Topology',
-    items: [
-      { id: 'plants', label: 'Plants & Facilities', icon: Building2, color: '#10B981' },
-      { id: 'machines', label: 'Machine Fleet', icon: Cpu, color: '#00BCF2' },
-      { id: 'sensors', label: 'Sensor Matrix', icon: Gauge, color: '#F59E0B' }
-    ]
-  },
-  {
-    group: 'Real-Time Operations',
-    items: [
-      { id: 'telemetry', label: 'Live Telemetry', icon: Activity, color: '#38BDF8' },
-      { id: 'alerts', label: 'System Alerts', icon: AlertTriangle, color: '#EF4444', hasBadge: true }
-    ]
-  },
-  {
-    group: 'Industrial Analytics',
-    items: [
-      { id: 'production', label: 'Production Batches', icon: Layers, color: '#A855F7' },
-      { id: 'energy', label: 'Energy & Power', icon: Zap, color: '#EAB308' },
-      { id: 'maintenance', label: 'Maintenance & Health', icon: Wrench, color: '#EC4899' }
-    ]
-  }
-];
 
 export default function Sidebar({
   activeView,
@@ -56,7 +25,49 @@ export default function Sidebar({
   unresolvedAlertsCount = 0
 }) {
   const { user } = useAuth();
-  const isAdmin = user?.role === 'ADMIN';
+  const role = (user?.role || 'ADMIN').toUpperCase();
+  const isAdmin = role === 'ADMIN';
+  const isManager = role === 'MANAGER';
+  const isEngineer = role === 'ENGINEER';
+  const isOperator = role === 'OPERATOR';
+
+  const roleConfig = isManager
+    ? { label: 'Manager Workspace', accent: '#A855F7', group: 'Executive Hub', home: { id: 'manager', label: 'Manager Dashboard', icon: BarChart3, color: '#A855F7' } }
+    : isEngineer
+      ? { label: 'Engineer Workspace', accent: '#00BCF2', group: 'Engineering Hub', home: { id: 'engineer', label: 'Engineer Dashboard', icon: Cpu, color: '#00BCF2' } }
+      : isOperator
+        ? { label: 'Floor Workspace', accent: '#10B981', group: 'Floor Operations', home: { id: 'operator', label: 'Operator Dashboard', icon: HardHat, color: '#10B981' } }
+        : { label: 'Admin Workspace', accent: '#F2C811', group: 'Governance', home: { id: 'admin', label: 'Admin Console', icon: Shield, color: '#F2C811' } };
+
+  const navSections = [
+    {
+      group: roleConfig.group,
+      items: [roleConfig.home]
+    },
+    {
+      group: isOperator ? 'Assigned Floor' : 'Manufacturing Topology',
+      items: [
+        { id: 'plants', label: isOperator ? 'Assigned Plant' : 'Plants & Facilities', icon: Building2, color: '#10B981' },
+        { id: 'machines', label: isOperator ? 'Assigned Machines' : 'Machine Fleet', icon: Cpu, color: '#00BCF2' },
+        { id: 'sensors', label: isOperator ? 'Machine Sensors' : 'Sensor Matrix', icon: Gauge, color: '#F59E0B' }
+      ]
+    },
+    {
+      group: 'Real-Time Operations',
+      items: [
+        { id: 'telemetry', label: 'Live Telemetry', icon: Activity, color: '#38BDF8' },
+        { id: 'alerts', label: isOperator ? 'Floor Alerts' : 'System Alerts', icon: AlertTriangle, color: '#EF4444', hasBadge: true }
+      ]
+    },
+    {
+      group: 'Industrial Analytics',
+      items: [
+        { id: 'production', label: isOperator ? 'Shift Production' : 'Production Batches', icon: Layers, color: '#A855F7' },
+        { id: 'energy', label: 'Energy & Power', icon: Zap, color: '#EAB308' },
+        { id: 'maintenance', label: isOperator ? 'Maintenance Guide' : 'Maintenance & Health', icon: Wrench, color: '#EC4899' }
+      ]
+    }
+  ];
 
   return (
     <aside className={`pbi-sidebar ${collapsed ? 'collapsed' : ''}`}>
@@ -64,8 +75,8 @@ export default function Sidebar({
       <div className="pbi-sidebar-header">
         {!collapsed && (
           <div className="pbi-sidebar-workspace-label" title="KYNEXIS Intelligence Hub">
-            <Sparkles size={13} color="#F2C811" />
-            <span>Workspace</span>
+            <Sparkles size={13} color={roleConfig.accent} />
+            <span>{roleConfig.label}</span>
           </div>
         )}
         <button
@@ -80,7 +91,7 @@ export default function Sidebar({
 
       {/* Navigation List */}
       <nav className="pbi-sidebar-nav">
-        {NAV_ITEMS.map((section, idx) => (
+        {navSections.map((section, idx) => (
           <div key={idx}>
             {!collapsed && (
               <div className="pbi-sidebar-section">
@@ -91,7 +102,6 @@ export default function Sidebar({
             {section.items.map((item) => {
               const Icon = item.icon;
               const isActive = activeView === item.id;
-              const isLocked = item.roleReq && !isAdmin;
 
               return (
                 <button
@@ -119,29 +129,12 @@ export default function Sidebar({
                       {unresolvedAlertsCount}
                     </span>
                   )}
-
-                  {!collapsed && isLocked && (
-                    <span style={{ fontSize: '9px', color: '#64748B', fontFamily: 'var(--pbi-font-mono)' }}>
-                      🔒
-                    </span>
-                  )}
                 </button>
               );
             })}
           </div>
         ))}
       </nav>
-
-      {/* Sidebar Footer */}
-      {!collapsed && (
-        <div className="pbi-sidebar-footer">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: '#94A3B8' }}>
-            <span>Reports Hub</span>
-            <span style={{ color: '#F2C811', fontWeight: 700 }}>DirectQuery</span>
-          </div>
-        </div>
-      )}
     </aside>
   );
 }
-

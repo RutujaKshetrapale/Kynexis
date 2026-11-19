@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, SEED_USERS } from './context/AuthContext';
-import { useBackendStatus, alertsApi } from './services/api';
+import { alertsApi, plantsApi } from './services/api';
 import LoadingSpinner from './components/LoadingSpinner';
 import Sidebar from './components/Sidebar';
 import LoginView from './views/LoginView';
 import AdminView from './views/AdminView';
+import ManagerDashboardView from './views/ManagerDashboardView';
+import EngineerDashboardView from './views/EngineerDashboardView';
+import OperatorDashboardView from './views/OperatorDashboardView';
 import PlantsView from './views/PlantsView';
 import MachinesView from './views/MachinesView';
 import ProductionView from './views/ProductionView';
@@ -39,6 +42,9 @@ const ROLE_THEMES = {
 
 const PAGE_METADATA = {
   admin: { title: 'Administration Console', icon: Shield, color: '#F2C811' },
+  manager: { title: 'Manager Dashboard', icon: BarChart3, color: '#A855F7' },
+  engineer: { title: 'Engineer Dashboard', icon: Cpu, color: '#00BCF2' },
+  operator: { title: 'Operator Dashboard', icon: HardHat, color: '#10B981' },
   plants: { title: 'Manufacturing Plants & Facilities Master', icon: Building2, color: '#10B981' },
   machines: { title: 'Machine Fleet & Asset Diagnostics', icon: Cpu, color: '#00BCF2' },
   production: { title: 'Production Batches & Yield Analytics', icon: Layers, color: '#A855F7' },
@@ -49,23 +55,55 @@ const PAGE_METADATA = {
   sensors: { title: 'Sensor Calibration & Threshold Matrix', icon: Gauge, color: '#F59E0B' }
 };
 
+function getDefaultPageForRole(role) {
+  const normalized = (role || 'ADMIN').toUpperCase();
+  if (normalized === 'MANAGER') return 'manager';
+  if (normalized === 'ENGINEER') return 'engineer';
+  if (normalized === 'OPERATOR') return 'operator';
+  return 'admin';
+}
+
+const ROLE_HOME_PAGES = new Set(['admin', 'manager', 'engineer', 'operator']);
+
 export default function App() {
-  const { user, loading, logout, switchDemoUser } = useAuth();
-  const { isLive } = useBackendStatus();
+  const { user, loading, logout, switchDemoUser, assignedPlantId, setOperatorPlantAssignment } = useAuth();
   const [roleMenuOpen, setRoleMenuOpen] = useState(false);
-  const [activePage, setActivePage] = useState('admin');
+  const [activePage, setActivePage] = useState(() => getDefaultPageForRole(user?.role));
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [unresolvedAlertsCount, setUnresolvedAlertsCount] = useState(0);
+  const [allPlants, setAllPlants] = useState([]);
+
+  // Fetch plants for Operator Plant selector inside Switch Role menu
+  useEffect(() => {
+    if (!user) return;
+    plantsApi.getAll()
+      .then(res => setAllPlants(Array.isArray(res) ? res : (res?.content || [])))
+      .catch(() => { });
+  }, [user]);
+
+  // Automatically route to role-appropriate home dashboard on login or role switch
+  useEffect(() => {
+    if (!user?.role) return;
+    const expectedHome = getDefaultPageForRole(user.role);
+    if (ROLE_HOME_PAGES.has(activePage) && activePage !== expectedHome) {
+      setActivePage(expectedHome);
+    }
+  }, [user?.role]);
 
   // Sync alerts badge
   useEffect(() => {
     if (!user) return;
-    alertsApi.getUnresolved()
-      .then(res => {
-        const count = Array.isArray(res) ? res.length : (res?.content?.length || 0);
-        setUnresolvedAlertsCount(count);
-      })
-      .catch(() => {});
+    const refreshBadge = () => {
+      alertsApi.getUnresolved()
+        .then(res => {
+          const count = Array.isArray(res) ? res.length : (res?.content?.length || 0);
+          setUnresolvedAlertsCount(count);
+        })
+        .catch(() => { });
+    };
+    refreshBadge();
+    window.addEventListener('kynexis-alerts-updated', refreshBadge);
+    return () => window.removeEventListener('kynexis-alerts-updated', refreshBadge);
   }, [user, activePage]);
 
   // If user is not authenticated, display the Power BI Login View
@@ -76,10 +114,26 @@ export default function App() {
   const roleKey = (user.role || 'ADMIN').toUpperCase();
   const roleTheme = ROLE_THEMES[roleKey] || ROLE_THEMES.ADMIN;
   const RoleIcon = roleTheme.icon;
-  const currentPageInfo = PAGE_METADATA[activePage] || PAGE_METADATA.admin;
+  const currentPageInfo = PAGE_METADATA[activePage] || PAGE_METADATA[getDefaultPageForRole(roleKey)];
+
+  const roleThemeClass = roleKey === 'MANAGER'
+    ? 'theme-manager'
+    : roleKey === 'ENGINEER'
+      ? 'theme-engineer'
+      : roleKey === 'OPERATOR'
+        ? 'theme-operator'
+        : '';
+
+  const visiblePageTabs = Object.entries(PAGE_METADATA).filter(([key]) => {
+    if (key === 'admin') return roleKey === 'ADMIN';
+    if (key === 'manager') return roleKey === 'MANAGER';
+    if (key === 'engineer') return roleKey === 'ENGINEER';
+    if (key === 'operator') return roleKey === 'OPERATOR';
+    return true;
+  });
 
   return (
-    <div className="pbi-report-layout">
+    <div className={`pbi-report-layout ${roleThemeClass}`}>
       {/* Power BI Service Action Ribbon */}
       <header className="pbi-ribbon">
         <div className="pbi-ribbon-left">
@@ -99,20 +153,6 @@ export default function App() {
                 </span>
               </div>
             </div>
-          </div>
-
-          <div
-            className="pbi-status-pill"
-            style={{ border: isLive ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid rgba(245, 158, 11, 0.4)' }}
-          >
-            <span style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              background: isLive ? '#10B981' : '#F59E0B',
-              boxShadow: `0 0 6px ${isLive ? '#10B981' : '#F59E0B'}`
-            }} />
-            <span>{isLive ? 'DirectQuery • MySQL Live (:8080)' : 'DirectQuery Gateway Connecting'}</span>
           </div>
         </div>
 
@@ -234,6 +274,51 @@ export default function App() {
                     </button>
                   );
                 })}
+
+                {allPlants.length > 0 && (
+                  <div style={{ borderTop: '1px solid var(--pbi-border)', marginTop: '6px', paddingTop: '8px', paddingLeft: '8px', paddingRight: '8px', paddingBottom: '4px' }}>
+                    <div style={{ fontSize: '10px', color: '#34D399', fontWeight: 700, textTransform: 'uppercase', marginBottom: '5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Building2 size={11} />
+                      <span>Operator Assigned Plant</span>
+                    </div>
+                    <select
+                      aria-label="Select assigned plant for Floor Operator persona"
+                      value={String(assignedPlantId)}
+                      onChange={async (e) => {
+                        const pid = Number(e.target.value);
+                        setOperatorPlantAssignment('operator', pid);
+                        if (roleKey === 'OPERATOR') {
+                          setOperatorPlantAssignment(user.username, pid);
+                        } else {
+                          setRoleMenuOpen(false);
+                          try {
+                            await switchDemoUser('OPERATOR', pid);
+                          } catch (err) {
+                            console.error('Failed to switch operator plant:', err);
+                          }
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        background: '#0E1422',
+                        border: '1px solid rgba(16, 185, 129, 0.4)',
+                        color: '#E2E8F0',
+                        borderRadius: '4px',
+                        padding: '5px 8px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        fontFamily: 'inherit'
+                      }}
+                    >
+                      {allPlants.map(p => (
+                        <option key={p.id} value={String(p.id)}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -266,6 +351,9 @@ export default function App() {
         {/* Dynamic Report View */}
         <main className="pbi-canvas-main" style={{ overflowY: 'auto', flex: 1 }}>
           {activePage === 'admin' && <AdminView />}
+          {activePage === 'manager' && <ManagerDashboardView />}
+          {activePage === 'engineer' && <EngineerDashboardView />}
+          {activePage === 'operator' && <OperatorDashboardView />}
           {activePage === 'plants' && <PlantsView />}
           {activePage === 'machines' && <MachinesView />}
           {activePage === 'production' && <ProductionView />}
@@ -279,7 +367,7 @@ export default function App() {
 
       {/* Bottom Power BI Page Tabs Bar */}
       <footer className="pbi-page-tabs-bar">
-        {Object.entries(PAGE_METADATA).map(([key, meta]) => {
+        {visiblePageTabs.map(([key, meta]) => {
           const TabIcon = meta.icon;
           const isActive = activePage === key;
           return (
